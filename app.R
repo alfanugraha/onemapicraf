@@ -2,6 +2,8 @@
 library(shiny)
 library(shinydashboard)
 
+# source(file='')
+
 # initiate global variable
 appsTitle <- 'One Map ICRAF'
 appsMenu <- data.frame(
@@ -41,7 +43,29 @@ idInfEntity <- data.frame(
   desc = c('', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '')
 )
 # 6. distribution info
-
+idInfEntity <- data.frame(
+  vars = c('citation', 'title', 'date', 'dateType', 'abstract', 'resMaintenance', 'descKey', 'spatRes', 'resCons', 'spatRepType', 'langIdent', 'charSetCode', 'topicCat', 'westBoundLong', 'eastBoundLong', 'southBoundLat', 'northBoundLat'),
+  name = c('Citation', 'Title', 'Date', 'Date Type', 'Abstract', 'Resource Maintenance', 'Descriptive Keywords', 'Spatial Resolution', 'Resource Constraints', 'Spatial Representation Type', 'Language Identification', 'Character Set Code', 'Topic Category', 'West Bound Longitude', 'East Bound Longitude', 'South Bound Latitude', 'North Bound Latitude'),
+  desc = c('', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '')
+)
+# 7. transfer options (4): WFS, WMS, ZIP Shapefile, ImageWMS
+transOptEntity <- data.frame(
+  vars = c('linkage', 'protocol', 'name', 'description', 'func'),
+  name = c('Linkage', 'Protocol', 'Name', 'Description', 'Function'),
+  desc = c('', '', '', '', '')
+)
+# 8. metadata maintenance
+mdMtncEntity <- data.frame(
+  vars = c('updFreq', 'note'),
+  name = c('Maintenance and Update Frequency', 'Maintenance Note'),
+  desc = c('', '')
+)
+# 9. metadata constraints
+mdConstEntity <- data.frame(
+  vars = c('class', 'userNote', 'userLimit'),
+  name = c('Classification', 'User Note', 'User Limitation'),
+  desc = c('', '', '')
+)
 
 # header
 header <- dashboardHeader(title=appsTitle)
@@ -71,9 +95,22 @@ body <- dashboardBody(
     
     tabItem(tabName = appsMenu$tabName[2],
             h2(appsMenu$menuItem[2]),
-            box(
-              textInput("individualName", "Name", value="", width=NULL, placeholder="Fill the name")
-            )
+            box(textInput(ctEntity$vars[1], ctEntity$name[1], value="", width=NULL, placeholder="Fill the name")),
+            box(textInput(ctEntity$vars[2], ctEntity$name[2], value="", width=NULL, placeholder="")),
+            box(textInput(ctEntity$vars[3], ctEntity$name[3], value="", width=NULL, placeholder="")),
+            box(textInput(ctEntity$vars[4], ctEntity$name[4], value="", width=NULL, placeholder="")),
+            box(textInput(ctEntity$vars[5], ctEntity$name[5], value="", width=NULL, placeholder="")),
+            box(textInput(ctEntity$vars[6], ctEntity$name[6], value="", width=NULL, placeholder="")),
+            box(textInput(ctEntity$vars[7], ctEntity$name[7], value="", width=NULL, placeholder="")),
+            box(textInput(ctEntity$vars[8], ctEntity$name[8], value="", width=NULL, placeholder="")),
+            box(textInput(ctEntity$vars[9], ctEntity$name[9], value="", width=NULL, placeholder="")),
+            box(textInput(ctEntity$vars[10], ctEntity$name[10], value="", width=NULL, placeholder="")),
+            box(textInput(ctEntity$vars[11], ctEntity$name[11], value="", width=NULL, placeholder="")),
+            box(textInput(ctEntity$vars[12], ctEntity$name[12], value="", width=NULL, placeholder="")),
+            box(textInput(ctEntity$vars[13], ctEntity$name[13], value="", width=NULL, placeholder="")),
+            box(textInput(ctEntity$vars[14], ctEntity$name[14], value="", width=NULL, placeholder="")),
+            box(textInput(ctEntity$vars[15], ctEntity$name[15], value="", width=NULL, placeholder="")),
+            box(textInput(ctEntity$vars[16], ctEntity$name[16], value="", width=NULL, placeholder=""))
     
     ),
     
