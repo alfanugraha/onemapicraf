@@ -33,7 +33,7 @@ body <- dashboardBody(
             textInput(mdEntity$vars[4], mdEntity$name[4], value="", width=NULL, placeholder=""),
             textInput(mdEntity$vars[5], mdEntity$name[5], value="", width=NULL, placeholder=""),
             textInput(mdEntity$vars[6], mdEntity$name[6], value="", width=NULL, placeholder=""),
-            textInput(mdEntity$vars[7], mdEntity$name[7], value="", width=NULL, placeholder=""),
+            dateInput(mdEntity$vars[7], mdEntity$name[7]),
             textInput(mdEntity$vars[8], mdEntity$name[8], value="", width=NULL, placeholder="")
     ),
     
@@ -78,7 +78,7 @@ body <- dashboardBody(
     tabItem(tabName = appsMenu$tabName[4],
             h2(appsMenu$menuItem[4]),
             textInput(refSysEntity$vars[1], refSysEntity$name[1], value="", width=NULL, placeholder=""),
-            textInput(refSysEntity$vars[2], refSysEntity$name[2], value="", width=NULL, placeholder=""),
+            dateInput(refSysEntity$vars[2], refSysEntity$name[2]),
             textInput(refSysEntity$vars[3], refSysEntity$name[3], value="", width=NULL, placeholder=""),
             textInput(refSysEntity$vars[4], refSysEntity$name[4], value="", width=NULL, placeholder=""),
             textInput(refSysEntity$vars[5], refSysEntity$name[5], value="", width=NULL, placeholder=""),
@@ -95,7 +95,7 @@ body <- dashboardBody(
             h2(appsMenu$menuItem[5]),
             textInput(idInfoEntity$vars[1], idInfoEntity$name[1], value="", width=NULL, placeholder=""),
             textInput(idInfoEntity$vars[2], idInfoEntity$name[2], value="", width=NULL, placeholder=""),
-            textInput(idInfoEntity$vars[3], idInfoEntity$name[3], value="", width=NULL, placeholder=""),
+            dateInput(idInfoEntity$vars[3], idInfoEntity$name[3]),
             textInput(idInfoEntity$vars[4], idInfoEntity$name[4], value="", width=NULL, placeholder=""),
             textInput(idInfoEntity$vars[5], idInfoEntity$name[5], value="", width=NULL, placeholder=""),
             textInput(idInfoEntity$vars[6], idInfoEntity$name[6], value="", width=NULL, placeholder=""),
