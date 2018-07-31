@@ -5,10 +5,11 @@ library(shinydashboard)
 source('variables.R')
 
 # header
-header <- dashboardHeader(title=appsTitle)
+header <- dashboardHeader(title=appsTitle, titleWidth=280)
 
 # sidebar
 sidebar <- dashboardSidebar(
+  width=280,
   sidebarMenu(
     menuItem(appsMenu$menuItem[1], tabName = appsMenu$tabName[1]),
     menuItem(appsMenu$menuItem[2], tabName = appsMenu$tabName[2]),

@@ -1,5 +1,5 @@
 # initiate global variable
-appsTitle <- 'One Map ICRAF'
+appsTitle <- 'One Map - Compilation Tool'
 appsMenu <- data.frame(
   menuItem = c('Metadata', 'Contact', 'Spatial Representation Info', 'Reference System Info', 'Identification Info',
                'Distribution Info', 'Transfer Options', 'Metadata Maintenace', 'Metadata Constrains'),
