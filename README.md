@@ -36,25 +36,25 @@ $ sudo yum install --nogpgcheck shiny-server-1.5.7.907-rh6-x86_64.rpm
 
 ### Check and start the server status
 ```
-sudo systemctl status shiny-server
-sudo systemctl enable shiny-server
+$ sudo systemctl status shiny-server
+$ sudo systemctl enable shiny-server
 ```
 
 ### Modify firewall settings
 ```
-sudo firewall-cmd --permanent --zone=public --add-port=3838/tcp
-sudo firewall-cmd --reload
+$ sudo firewall-cmd --permanent --zone=public --add-port=3838/tcp
+$ sudo firewall-cmd --reload
 ```
 
 ### Clone this repository
 ```
-cd /srv/shiny-server
-sudo mkdir onemap
-git clone https://github.com/alfanugraha/onemapicraf.git onemap
+$ cd /srv/shiny-server
+$ sudo mkdir onemap
+$ git clone https://github.com/alfanugraha/onemapicraf.git onemap
 ```
 
 ## Deploy Your Application
-Now, point your web browser to http://yourdomainORip:3838/onemap, If nothing goes wrong, you will be brought into the One Map Shiny Server in which you can use it as well after install geoportal PALAPA and PostgreSQL Database.
+Now, point your web browser to http://your-domain-or-ip:3838/onemap, If nothing goes wrong, you will be brought into the One Map Shiny Server in which you can use it as well after install geoportal PALAPA and PostgreSQL Database.
 
 
 
