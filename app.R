@@ -1,6 +1,8 @@
 # initiate library
 library(shiny)
 library(shinydashboard)
+library(splitstackshape)
+library(XML)
 
 source('variables.R')
 
