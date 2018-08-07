@@ -25,7 +25,7 @@ $ sudo yum update
 ```
 $ sudo yum install -y R
 $ sudo su - \
--c "R -e \"install.packages(c('shiny', 'shinydashboard', 'XML', 'splitstackshape', 'DBI', 'RPostgreSQL', 'rpostgis'), repos='https://cran.rstudio.com/')\""
+-c "R -e \"install.packages(c('rmarkdown', 'shiny', 'shinydashboard', 'XML', 'splitstackshape', 'DBI', 'RPostgreSQL', 'rpostgis'), repos='https://cran.rstudio.com/')\""
 ```
 
 ### Download and install Shiny Server 64-bit
