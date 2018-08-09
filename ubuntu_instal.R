@@ -6,8 +6,10 @@ nano /etc/apt/sources.list.d/pgdg.list
 deb http://apt.postgresql.org/pub/repos/apt/ trusty-pgdg main
 wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
 sudo add-apt-repository ppa:ubuntugis/ubuntugis-unstable
+sudo add-apt-repository -y ppa:ubuntugis/ppa
     
   sudo apt-get update
+
 
 
 
@@ -112,3 +114,31 @@ sudo su - postgres -c "pg_restore -d palapa /home/paket/palapa_init_v6.backup" >
 
 
 /etc/apache2/sites-available
+a2enmod headers
+a2nsite pycsw.conf gspalapa.conf
+
+# gs-api.service
+setuid root
+setgid root
+
+start on runlevel [2345]
+stop on runlevel [016]
+
+chdir /opt/gspalapa-api
+
+exec /usr/local/bin/uwsgi --thunder-lock --enable-threads --socket 0.0.0.0:8000 --protocol http
+
+
+
+<filter>
+<filter-name>CorsFilter</filter-name>
+<filter-class>org.apache.catalina.filters.CorsFilter</filter-class>
+<init-param>
+<param-name>cors.allowed.origins</param-name>
+<param-value>*</param-value>
+</init-param>
+</filter>
+<filter-mapping>
+<filter-name>CorsFilter</filter-name>
+<url-pattern>/*</url-pattern>
+</filter-mapping>
