@@ -219,13 +219,14 @@ server <- function(input, output, session) {
   # 
   observe({
     act <- input$saveButton
+    print(!is.null(act))
     
-    if(is.null(act)){
+    if(!is.null(act)){
       fileName <- input$fileIdentifier
       
       mdEntity <- data.frame(
         name = c('File Identifier', 'Language', 'Character Set', 'Hierarchy Level', 'Metadata Standard Name', 'Metadata Standard Version', 'Date Stamp', 'Data Set URI'),
-        vars = c(fileName, input$lang, input$charSet, input$mdEntity$hieLvl, input$mdEntity$mdStdName, input$mdStdVer, input$dateStamp, input$mdEntity$dataSetURI)
+        vars = c(fileName, input$lang, input$charSet, input$hieLvl, input$mdStdName, input$mdStdVer, input$dateStamp, input$dataSetURI)
       )
       
       downloadHandler(
@@ -237,8 +238,9 @@ server <- function(input, output, session) {
         }
       )
       
-      # eval(parse(text=(paste("list_of_comp_data<-data.frame(RST_NAME=tolower(input$mdEntity$vars[1]), row.names=NULL)", sep=""))))
+      # eval(parse(text=(paste("list_of_comp_data<-data.frame(DATA_NAME=tolower(fileName), row.names=NULL)", sep=""))))
       # dbWriteTable(DB, "list_of_comp_data", list_of_comp_data, append=TRUE, row.names=FALSE)
+      # dbWriteTable(DB, "mdEntity", mdEntity, append=TRUE, row.names=FALSE)
       
       
       # csw <- newXMLNode("GetRecordByIdResponse",
