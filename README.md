@@ -55,6 +55,6 @@ $ git clone https://github.com/alfanugraha/onemapicraf.git onemap
 
 ## Deploy Your Application
 Now, point your web browser to http://your-domain-or-ip:3838/onemap, If nothing goes wrong, you will be brought into the One Map Shiny Server in which you can use it as well after install geoportal PALAPA and PostgreSQL Database.
-
-
-
+```
+options(shiny.maxRequestSize=30*1042^2)
+```

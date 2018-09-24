@@ -1,5 +1,12 @@
-.Rproj.user
+.Rproj.user/
 .Rhistory
 .RData
 .Ruserdata
 *.Rproj
+*.bat
+.Rapp.history
+*-Ex.R
+/*.Rcheck/
+/*_cache/
+/cache/
+*.xml
