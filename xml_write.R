@@ -112,7 +112,7 @@ MD_Metadata <- newXMLNode("MD_Metadata",
         
   dataSetURI <- newXMLNode("dataSetURI", namespace="gmd", parent=MD_Metadata)
     CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=dataSetURI)
-      addChildren(CharacterString, input$dataSetURI)
+      addChildren(CharacterString, input$mdDataSetURI)
       
   spatialRepresentationInfo  <- newXMLNode("spatialRepresentationInfo", namespace="gmd", parent=MD_Metadata) 
     MD_VectorSpatialRepresentation <- newXMLNode(name="MD_VectorSpatialRepresentation", namespace="gmd", parent=spatialRepresentationInfo)
@@ -395,4 +395,4 @@ MD_Metadata <- newXMLNode("MD_Metadata",
       CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=userNt)
         addChildren(CharacterString, input$userNote)
   
-saveXML(csw, file="tes.xml", encoding="UTF-8", indent=T)
+saveXML(csw, file="coba2.xml", encoding="UTF-8", indent=T)

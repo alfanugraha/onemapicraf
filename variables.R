@@ -8,7 +8,7 @@ appsMenu <- data.frame(
 )
 # 1. metadata
 mdEntity <- data.frame(
-  vars = c('fileIdentifier', 'lang', 'charSet', 'hieLvl', 'mdStdName', 'mdStdVer', 'dateStamp', 'dataSetURI'),
+  vars = c('fileIdentifier', 'lang', 'charSet', 'hieLvl', 'mdStdName', 'mdStdVer', 'dateStamp', 'mdDataSetURI'),
   name = c('File Identifier', 'Language', 'Character Set', 'Hierarchy Level', 'Metadata Standard Name', 'Metadata Standard Version', 'Date Stamp', 'Data Set URI'),
   val = c('', '', '', '', '', '', '', ''),
   desc = c('', '', '', '', '', '', '', '')
