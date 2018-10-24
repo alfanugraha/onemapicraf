@@ -1,4 +1,4 @@
-# initiate library
+###*Initiate Library####
 library(shiny)
 library(shinydashboard)
 library(shinythemes)
@@ -11,12 +11,15 @@ library(DBI)
 library(RPostgreSQL)
 library(rpostgis)
 
+###*Define Variables####
 source('variables.R')
 
+###*Setting Up Interface####
 ui <- source('interface.R')
 
-# Define server 
+###*Preparing Server#### 
 server <- function(input, output, session) {
+  ###*Connect to PostgreSQL Database####
   pg_user<-"postgres"
   pg_db<-"postgres"
   pg_host<-"localhost"
@@ -28,14 +31,14 @@ server <- function(input, output, session) {
     driver, dbname=pg_db, host=pg_host, port=pg_port, user=pg_user, password=pg_pwd
   )
   
-  # generate DATA page
-  list_of_comp_data <- dbReadTable(DB, c("public", "list_of_comp_data"))
+  ###*DATA Page####
+  metadata <- dbReadTable(DB, c("public", "metadata"))
 
   output$comp_data <- DT::renderDataTable({
-    DT::datatable(list_of_comp_data)
+    DT::datatable(metadata)
   })
 
-  ## identify input from UPLOAD page
+  ###*Observe Shapefile Input####
   observe({
     inShp <- input$shpData
     inShpType <- inShp$type
@@ -43,62 +46,53 @@ server <- function(input, output, session) {
     print(inShpPath)
 
     if(is.null(inShp)){
-      val = ""
+      val <- ""
     } else {
-      file_name <- inShp$name
       temp_dir <- dirname(inShpPath)
       unzip(inShpPath, exdir = temp_dir)
       file_shp <- dir(temp_dir, pattern="*.shp$")
-      val = str_remove(basename(file_shp), ".shp")
-      # if(file.exists(paste0(dirtemp, val))){
-      #   print("oke")
-      # }
-      val = paste0(val, "_", format(Sys.time(), "%Y%m%d%H%M%S"))
+      val <- str_remove(basename(file_shp), ".shp")
+      
+      full_file_shp <- paste0(temp_dir, val)
+      if(file.exists(full_file_shp)){
+        readShp<-readOGR(dsn = full_file_shp, layer = val)
+        insertShp <- tryCatch({ pgInsert(DB, val, readShp) }, error=function(e){})
+        print(insertShp)
+        if(insertShp){
+          print("Data inserted into database")
+        } else {
+          return(NULL)
+        }
+      } else {
+        return(NULL)
+      }
+      
+      val <- paste0(val, "_", format(Sys.time(), "%Y%m%d%H%M%S"))
     }
 
     updateTextInput(session, inputId=mdEntity$vars[1], value=val)
   })
   
-  
-  #
-  # shpName <- str_remove(basename(shpData), ".shp")
-  # shpRead <- readOGR(shpData, shpName)
-  # shpSRID<-tryCatch({pgSRID(DB, crs(shpRead), create.srid = TRUE)}, error=function(e){ })
-  # pgEnvBatch <- paste("pg_env.bat", sep="")
-  # pathEnv = ""
-  # pathEnv[1] = paste0("@SET PATH=", postgre_path, "\\bin;%PATH%")
-  # pathEnv[2] = paste0("@SET PGDATA=", postgre_path, "\\data")
-  # pathEnv[3] = paste0("@SET PGUSER=", pg_user)
-  # pathEnv[4] = paste0("@SET PGPORT=", pg_port)
-  # pathEnv[5] = paste0("@SET PGLOCALEDIR=", postgre_path, "\\share\\locale\n")
-  # 
-  # createNewPGTbl = pathEnv
-  # createNewPGTbl[6] = paste('shp2pgsql -I -s ', shpSRID , str_replace_all(string=shpRead, pattern="/", repl='\\\\'), shpName, ' | psql -d ', pg_db, sep="")
-  # 
-  # newBatchFile <- file(pgEnvBatch)
-  # writeLines(createNewPGTbl, newBatchFile)
-  # close(newBatchFile)
-  # 
-  # pgEnvBatchFile<-str_replace_all(string=pgEnvBatch, pattern="/", repl='\\\\')
-  # system(pgEnvBatchFile)
-  # 
+  ###*Observe Save Button Action####
   observeEvent(input$saveButton, {
+    ###*Create New XML####
     csw <- newXMLNode("GetRecordByIdResponse",
       namespace="csw",
       attrs=c("xsi:schemaLocation"="http://www.opengis.net/cat/csw/2.0.2 http://schemas.opengis.net/csw/2.0.2/CSW-discovery.xsd"),
-      namespaceDefinitions=c("csw"="http://www.opengis.net/cat/csw/2.0.2",
-                              "dc"="http://purl.org/dc/elements/1.1/",
-                              "dct"="http://purl.org/dc/terms/",
-                              "gco"="http://www.isotc211.org/2005/gco",
-                              "gmd"="http://www.isotc211.org/2005/gmd",
-                              "gml"="http://www.opengis.net/gml",
-                              "ows"="http://www.opengis.net/ows",
-                              "xs"="http://www.w3.org/2001/XMLSchema",
-                              "xsi"="http://www.w3.org/2001/XMLSchema-instance"
-                              )
+      namespaceDefinitions=c(
+        "csw"="http://www.opengis.net/cat/csw/2.0.2",
+        "dc"="http://purl.org/dc/elements/1.1/",
+        "dct"="http://purl.org/dc/terms/",
+        "gco"="http://www.isotc211.org/2005/gco",
+        "gmd"="http://www.isotc211.org/2005/gmd",
+        "gml"="http://www.opengis.net/gml",
+        "ows"="http://www.opengis.net/ows",
+        "xs"="http://www.w3.org/2001/XMLSchema",
+        "xsi"="http://www.w3.org/2001/XMLSchema-instance"
+        )
       )
 
-    # set metadata node
+    ###MD_Metadata node####
     MD_Metadata <- newXMLNode("MD_Metadata",
       namespace="gmd",
       attrs=c("xsi:schemaLocation"="http://www.isotc211.org/2005/gmd http://www.isotc211.org/2005/gmd/gmd.xsd http://www.isotc211.org/2005/gmx http://www.isotc211.org/2005/gmx/gmx.xsd"),
@@ -119,7 +113,8 @@ server <- function(input, output, session) {
       hierarchyLvl <- newXMLNode("hierarchyLevel", namespace="gmd", parent=MD_Metadata)
         MD_ScopeCode <- newXMLNode(name="MD_ScopeCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#MD_ScopeCode", "codeListValue"="dataset", "codeSpace"="ISOTC211/19115"), parent=hierarchyLvl)
           addChildren(MD_ScopeCode, input$hieLvl)
-          
+      
+      ###Contact Node####        
       contact <- newXMLNode("contact", namespace="gmd", parent=MD_Metadata)
         CI_ResponsibleParty <- newXMLNode(name="CI_ResponsibleParty", namespace="gmd", parent=contact)
           individualName <- newXMLNode(name="individualName", namespace="gmd", parent=contact)
@@ -183,310 +178,430 @@ server <- function(input, output, session) {
               addChildren(CI_RoleCode, input$contRole)          
 
               
-          dataStp <- newXMLNode("dateStamp", namespace="gmd", parent=MD_Metadata)
-            DateTime <- newXMLNode(name="DateTime", namespace="gco", parent=dataStp)
-              addChildren(DateTime, input$dateStamp)  
-          
-          metadataStandardName  <- newXMLNode("metadataStandardName", namespace="gmd", parent=MD_Metadata)
-            CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=metadataStandardName)
-              addChildren(CharacterString, input$mdStdName)
+      dataStp <- newXMLNode("dateStamp", namespace="gmd", parent=MD_Metadata)
+        DateTime <- newXMLNode(name="DateTime", namespace="gco", parent=dataStp)
+          addChildren(DateTime, input$dateStamp)  
+      
+      metadataStandardName  <- newXMLNode("metadataStandardName", namespace="gmd", parent=MD_Metadata)
+        CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=metadataStandardName)
+          addChildren(CharacterString, input$mdStdName)
+        
+      metadataStandardVersion  <- newXMLNode("metadataStandardVersion", namespace="gmd", parent=MD_Metadata)
+        CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=metadataStandardVersion)
+          addChildren(CharacterString, input$mdStdVer)
             
-          metadataStandardVersion  <- newXMLNode("metadataStandardVersion", namespace="gmd", parent=MD_Metadata)
-            CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=metadataStandardVersion)
-              addChildren(CharacterString, input$mdStdVer)
-                
-          dataSetURI <- newXMLNode("dataSetURI", namespace="gmd", parent=MD_Metadata)
-            CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=dataSetURI)
-              addChildren(CharacterString, input$mdDataSetURI)
-              
-          spatialRepresentationInfo  <- newXMLNode("spatialRepresentationInfo", namespace="gmd", parent=MD_Metadata) 
-            MD_VectorSpatialRepresentation <- newXMLNode(name="MD_VectorSpatialRepresentation", namespace="gmd", parent=spatialRepresentationInfo)
-              topologyLevel <- newXMLNode("topologyLevel", namespace="gmd", parent=MD_VectorSpatialRepresentation)
-                MD_TopologyLevelCode <- newXMLNode(name="MD_TopologyLevelCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#MD_TopologyLevelCode", "codeListValue"="geometryOnly", "codeSpace"="ISOTC211/19115"), parent=topologyLevel)
-                  addChildren(MD_TopologyLevelCode, input$topoLvl)
-              geometricObjects <- newXMLNode("geometricObjects", namespace="gmd", parent=MD_VectorSpatialRepresentation)
-                MD_GeometricObjects <- newXMLNode(name="MD_GeometricObjects", namespace="gmd", parent=geometricObjects)
-                  geometricObjectType <- newXMLNode(name="geometricObjectType", namespace="gmd", parent=MD_GeometricObjects)
-                    MD_GeometricObjectTypeCode <- newXMLNode(name="MD_GeometricObjectTypeCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#MD_GeometricObjectTypeCode", "codeListValue"="complex", "codeSpace"="ISOTC211/19115"), parent=geometricObjectType)
-                      addChildren(MD_GeometricObjectTypeCode, input$geomObj)
-              
-          referenceSystemInfo <- newXMLNode("referenceSystemInfo", namespace="gmd", parent=MD_Metadata)
-            MD_ReferenceSystem <- newXMLNode(name="MD_ReferenceSystem", namespace="gmd", parent=referenceSystemInfo)
-              referenceSystemIdentifier <- newXMLNode(name="referenceSystemIdentifier", namespace="gmd", parent=MD_ReferenceSystem)
-                RS_Identifier <- newXMLNode(name="RS_Identifier", namespace="gmd", parent=referenceSystemIdentifier)
-                  authorityRSI <- newXMLNode(name="authority", namespace="gmd", parent=RS_Identifier)
-                    CI_Citation <- newXMLNode(name="CI_Citation", namespace="gmd", parent=authorityRSI)
-                      titleAut <- newXMLNode(name="title", namespace="gmd", parent=CI_Citation)
-                        CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=titleAut)
-                          addChildren(CharacterString, input$rsTitle)        
-                      dateAut <- newXMLNode(name="date", namespace="gmd", parent=CI_Citation)
-                        CI_Date <- newXMLNode(name="CI_Date", namespace="gmd", parent=dateAut)
-                          dateDateAut <- newXMLNode(name="date", namespace="gmd", parent=CI_Date)
-                            dateCS <- newXMLNode(name="Date", namespace="gco", parent=dateDateAut)
-                              addChildren(dateCS, input$rsDate)
-                          dateTypeDateAut <- newXMLNode(name="dateType", namespace="gmd", parent=CI_Date)
-                            CI_DateTypeCode <- newXMLNode(name="CI_DateTypeCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#CI_DateTypeCode", "codeListValue"="publication", "codeSpace"="ISOTC211/19115"), parent=dateTypeDateAut)
-                              addChildren(CI_DateTypeCode, input$rsDateType)
-                      citedResponsibleParty <- newXMLNode(name="citedResponsibleParty", namespace="gmd", parent=CI_Citation)
-                        CI_ResponsiblePartyRSI<- newXMLNode(name="CI_ResponsibleParty", namespace="gmd", parent=citedResponsibleParty)
-                          organisationNameRSI <- newXMLNode(name="organisationName", namespace="gmd", parent=CI_ResponsiblePartyRSI)
-                            CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=organisationNameRSI)
-                              addChildren(CharacterString, input$rsOrgName)                       
-                          contactInfoRSI <- newXMLNode(name="contactInfo", namespace="gmd", parent=CI_ResponsiblePartyRSI)
-                            CI_ContactRSI <- newXMLNode(name="CI_Contact", namespace="gmd", parent=contactInfoRSI)
-                              onlineResourceRSI <- newXMLNode(name="onlineResource", namespace="gmd", parent=CI_ContactRSI)
-                                CI_OnlineResourceRSI <- newXMLNode(name="CI_OnlineResource", namespace="gmd", parent=onlineResourceRSI)
-                                  linkageRSI <- newXMLNode(name="linkage", namespace="gmd", parent=CI_OnlineResourceRSI)
-                                    URLRSI <- newXMLNode(name="URL", namespace="gmd", parent=linkageRSI)
-                                      addChildren(URLRSI, input$rsLinkage) 
-                          roleRSI <- newXMLNode(name="role", namespace="gmd", parent=CI_ResponsiblePartyRSI)
-                            CI_RoleCode <- newXMLNode(name="CI_RoleCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#CI_RoleCode", "codeListValue"="originator", "codeSpace"="ISOTC211/19115"), parent=roleRSI)
-                              addChildren(CI_RoleCode, input$rsRole) 
-                  codeRSI <- newXMLNode(name="code", namespace="gmd", parent=RS_Identifier)
-                    CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=codeRSI)
-                      addChildren(CharacterString, input$rsCode)
-                  versionRSI <- newXMLNode(name="version", namespace="gmd", parent=RS_Identifier)
-                    CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=versionRSI)
-                      addChildren(CharacterString, input$rsVersion)              
+      dataSetURI <- newXMLNode("dataSetURI", namespace="gmd", parent=MD_Metadata)
+        CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=dataSetURI)
+          addChildren(CharacterString, input$mdDataSetURI)
+      
+      ###SpatialRepresentationInfo Node####        
+      spatialRepresentationInfo  <- newXMLNode("spatialRepresentationInfo", namespace="gmd", parent=MD_Metadata) 
+        MD_VectorSpatialRepresentation <- newXMLNode(name="MD_VectorSpatialRepresentation", namespace="gmd", parent=spatialRepresentationInfo)
+          topologyLevel <- newXMLNode("topologyLevel", namespace="gmd", parent=MD_VectorSpatialRepresentation)
+            MD_TopologyLevelCode <- newXMLNode(name="MD_TopologyLevelCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#MD_TopologyLevelCode", "codeListValue"="geometryOnly", "codeSpace"="ISOTC211/19115"), parent=topologyLevel)
+              addChildren(MD_TopologyLevelCode, input$topoLvl)
+          geometricObjects <- newXMLNode("geometricObjects", namespace="gmd", parent=MD_VectorSpatialRepresentation)
+            MD_GeometricObjects <- newXMLNode(name="MD_GeometricObjects", namespace="gmd", parent=geometricObjects)
+              geometricObjectType <- newXMLNode(name="geometricObjectType", namespace="gmd", parent=MD_GeometricObjects)
+                MD_GeometricObjectTypeCode <- newXMLNode(name="MD_GeometricObjectTypeCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#MD_GeometricObjectTypeCode", "codeListValue"="complex", "codeSpace"="ISOTC211/19115"), parent=geometricObjectType)
+                  addChildren(MD_GeometricObjectTypeCode, input$geomObj)
+      
+      ###ReferenceSystemInfo Node####                
+      referenceSystemInfo <- newXMLNode("referenceSystemInfo", namespace="gmd", parent=MD_Metadata)
+        MD_ReferenceSystem <- newXMLNode(name="MD_ReferenceSystem", namespace="gmd", parent=referenceSystemInfo)
+          referenceSystemIdentifier <- newXMLNode(name="referenceSystemIdentifier", namespace="gmd", parent=MD_ReferenceSystem)
+            RS_Identifier <- newXMLNode(name="RS_Identifier", namespace="gmd", parent=referenceSystemIdentifier)
+              authorityRSI <- newXMLNode(name="authority", namespace="gmd", parent=RS_Identifier)
+                CI_Citation <- newXMLNode(name="CI_Citation", namespace="gmd", parent=authorityRSI)
+                  titleAut <- newXMLNode(name="title", namespace="gmd", parent=CI_Citation)
+                    CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=titleAut)
+                      addChildren(CharacterString, input$rsTitle)        
+                  dateAut <- newXMLNode(name="date", namespace="gmd", parent=CI_Citation)
+                    CI_Date <- newXMLNode(name="CI_Date", namespace="gmd", parent=dateAut)
+                      dateDateAut <- newXMLNode(name="date", namespace="gmd", parent=CI_Date)
+                        dateCS <- newXMLNode(name="Date", namespace="gco", parent=dateDateAut)
+                          addChildren(dateCS, input$rsDate)
+                      dateTypeDateAut <- newXMLNode(name="dateType", namespace="gmd", parent=CI_Date)
+                        CI_DateTypeCode <- newXMLNode(name="CI_DateTypeCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#CI_DateTypeCode", "codeListValue"="publication", "codeSpace"="ISOTC211/19115"), parent=dateTypeDateAut)
+                          addChildren(CI_DateTypeCode, input$rsDateType)
+                  citedResponsibleParty <- newXMLNode(name="citedResponsibleParty", namespace="gmd", parent=CI_Citation)
+                    CI_ResponsiblePartyRSI<- newXMLNode(name="CI_ResponsibleParty", namespace="gmd", parent=citedResponsibleParty)
+                      organisationNameRSI <- newXMLNode(name="organisationName", namespace="gmd", parent=CI_ResponsiblePartyRSI)
+                        CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=organisationNameRSI)
+                          addChildren(CharacterString, input$rsOrgName)                       
+                      contactInfoRSI <- newXMLNode(name="contactInfo", namespace="gmd", parent=CI_ResponsiblePartyRSI)
+                        CI_ContactRSI <- newXMLNode(name="CI_Contact", namespace="gmd", parent=contactInfoRSI)
+                          onlineResourceRSI <- newXMLNode(name="onlineResource", namespace="gmd", parent=CI_ContactRSI)
+                            CI_OnlineResourceRSI <- newXMLNode(name="CI_OnlineResource", namespace="gmd", parent=onlineResourceRSI)
+                              linkageRSI <- newXMLNode(name="linkage", namespace="gmd", parent=CI_OnlineResourceRSI)
+                                URLRSI <- newXMLNode(name="URL", namespace="gmd", parent=linkageRSI)
+                                  addChildren(URLRSI, input$rsLinkage) 
+                      roleRSI <- newXMLNode(name="role", namespace="gmd", parent=CI_ResponsiblePartyRSI)
+                        CI_RoleCode <- newXMLNode(name="CI_RoleCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#CI_RoleCode", "codeListValue"="originator", "codeSpace"="ISOTC211/19115"), parent=roleRSI)
+                          addChildren(CI_RoleCode, input$rsRole) 
+              codeRSI <- newXMLNode(name="code", namespace="gmd", parent=RS_Identifier)
+                CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=codeRSI)
+                  addChildren(CharacterString, input$rsCode)
+              versionRSI <- newXMLNode(name="version", namespace="gmd", parent=RS_Identifier)
+                CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=versionRSI)
+                  addChildren(CharacterString, input$rsVersion)              
 
-          identificationInfo <- newXMLNode("identificationInfo", namespace="gmd", parent=MD_Metadata)
-            MD_DataIdentification <- newXMLNode(name="MD_DataIdentification", namespace="gmd", parent=identificationInfo)
-              citationII <- newXMLNode(name="citation", namespace="gmd", parent=MD_DataIdentification)
-                CI_CitationII <- newXMLNode(name="CI_Citation", namespace="gmd", parent=citationII)
-                  titleII <- newXMLNode(name="title", namespace="gmd", parent=CI_CitationII)
-                    CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=titleII)
-                      addChildren(CharacterString, input$iiTitle)
-                  dateII <- newXMLNode(name="date", namespace="gmd", parent=CI_CitationII)
-                    CI_DateII <- newXMLNode(name="CI_Date", namespace="gmd", parent=dateII)
-                      dateCI_DateII <- newXMLNode(name="date", namespace="gmd", parent=CI_DateII)
-                        DateTimeDate <- newXMLNode(name="DateTime", namespace="gco", parent=dateCI_DateII)
-                          addChildren(DateTimeDate, input$iiDate)              
-                      dateTypeCI_DateII <- newXMLNode(name="dateType", namespace="gmd", parent=CI_DateII)
-                        CI_DateTypeCodeII <- newXMLNode(name="CI_DateTypeCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#CI_DateTypeCode", "codeListValue"="publication", "codeSpace"="ISOTC211/19115"), parent=dateTypeCI_DateII)
-                          addChildren(CI_DateTypeCodeII, input$iiDateType)
-              abstractII <- newXMLNode(name="abstract", namespace="gmd", parent=MD_DataIdentification)
-                CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=abstractII)
-                  addChildren(CharacterString, input$iiAbstract)
-              statusII <- newXMLNode(name="status", namespace="gmd", parent=MD_DataIdentification)
-                MD_ProgressCode <- newXMLNode(name="MD_ProgressCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#MD_ProgressCode", "codeListValue"="", "codeSpace"="ISOTC211/19115"), parent=statusII)
-              resourceMaintenanceII <- newXMLNode(name="resourceMaintenance", namespace="gmd", parent=MD_DataIdentification)
-                MD_MaintenanceInformation <- newXMLNode(name="MD_MaintenanceInformation", namespace="gmd", parent=resourceMaintenanceII)
-                  maintenanceAndUpdateFrequency <- newXMLNode(name="maintenanceAndUpdateFrequency", namespace="gmd", parent=MD_MaintenanceInformation)
-                    MD_MaintenanceFrequencyCode <- newXMLNode(name="MD_MaintenanceFrequencyCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#MD_MaintenanceFrequencyCode", "codeListValue"="asNeeded", "codeSpace"="ISOTC211/19115"), parent=maintenanceAndUpdateFrequency)
-                      addChildren(MD_MaintenanceFrequencyCode, input$iiResMaintenance)
-              descriptiveKeywordsII <- newXMLNode(name="descriptiveKeywords", namespace="gmd", parent=MD_DataIdentification)
-                MD_Keywords <- newXMLNode(name="MD_Keywords", namespace="gmd", parent=descriptiveKeywordsII)
-                  keywordDK <- newXMLNode(name="keyword", namespace="gmd", attrs=c("xsi:type"="gmd:PT_FreeText_PropertyType"), parent=MD_Keywords)
-                    CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=keywordDK)
-                      addChildren(CharacterString, input$iiDescKey)
-                    PT_FreeText <- newXMLNode(name="PT_FreeText", namespace="gmd", parent=keywordDK)
-                      textGroup <- newXMLNode(name="textGroup", namespace="gmd", parent=PT_FreeText)
-                        LocalisedCharacterString <- newXMLNode(name="LocalisedCharacterString", namespace="gmd", attrs=c("locale"="#locale-"), parent=PT_FreeText)
-                  typeDK <- newXMLNode(name="type", namespace="gmd", parent=MD_Keywords)
-                    MD_KeywordTypeCode <- newXMLNode(name="MD_KeywordTypeCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#MD_KeywordTypeCode", "codeListValue"="", "codeSpace"="ISOTC211/19115"), parent=typeDK)
-              resourceConstraintsII <- newXMLNode(name="resourceConstraints", namespace="gmd", parent=MD_DataIdentification)
-                MD_LegalConstraints <- newXMLNode(name="MD_LegalConstraints", namespace="gmd", parent=resourceConstraintsII)
-                  accessConstraints <- newXMLNode(name="accessConstraints", namespace="gmd", parent=MD_LegalConstraints)
-                    MD_RestrictionCode <- newXMLNode(name="MD_RestrictionCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#MD_RestrictionCode", "codeListValue"="otherRestrictions", "codeSpace"="ISOTC211/19115"), parent=accessConstraints)
-                      addChildren(MD_RestrictionCode, input$iiResCons)    
-              spatialRepresentationTypeII <- newXMLNode(name="spatialRepresentationType", namespace="gmd", parent=MD_DataIdentification)
-                MD_SpatialRepresentationTypeCode <- newXMLNode(name="MD_SpatialRepresentationTypeCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#MD_SpatialRepresentationTypeCode", "codeListValue"="vector", "codeSpace"="ISOTC211/19115"), parent=spatialRepresentationTypeII)
-                  addChildren(MD_SpatialRepresentationTypeCode, input$iiSpatRepType)         
-              languageII <- newXMLNode(name="language", namespace="gmd", parent=MD_DataIdentification)
-                LanguageCodeII <- newXMLNode(name="LanguageCode", namespace="gmd", attrs=c("codeList"="http://www.loc.gov/standards/iso639-2/", "codeListValue"="ind", "codeSpace"="ISO 639-2"), parent=languageII)
-                  addChildren(LanguageCodeII, input$iiLangIdent)        
-              characterSetII <- newXMLNode(name="characterSet", namespace="gmd", parent=MD_DataIdentification)
-                MD_CharacterSetCode <- newXMLNode(name="MD_CharacterSetCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#MD_CharacterSetCode", "codeListValue"="utf8", "codeSpace"="ISOTC211/19115"), parent=characterSetII)
-                  addChildren(MD_CharacterSetCode, input$iiCharSetCode)
-              topicCategoryII <- newXMLNode(name="topicCategory", namespace="gmd", parent=MD_DataIdentification)
-                MD_TopicCategoryCode <- newXMLNode(name="MD_TopicCategoryCode", namespace="gmd", parent=topicCategoryII)
-                  addChildren(MD_TopicCategoryCode, input$iiTopicCat)
-              extentII <- newXMLNode(name="extent", namespace="gmd", parent=MD_DataIdentification)
-                EX_Extent <- newXMLNode(name="EX_Extent", namespace="gmd", parent=extentII)
-                  geographicElement <- newXMLNode(name="geographicElement", namespace="gmd", parent=EX_Extent)
-                    EX_GeographicBoundingBox <- newXMLNode(name="EX_GeographicBoundingBox", namespace="gmd", parent=geographicElement)
-                      extentTypeCode <- newXMLNode(name="extentTypeCode", namespace="gmd", parent=EX_GeographicBoundingBox)
-                        extentTypeCodeBoolean <- newXMLNode(name="Boolean", namespace="gco", parent=extentTypeCode)
-                          addChildren(extentTypeCodeBoolean, "1")                
-                      westBoundLongitude <- newXMLNode(name="westBoundLongitude", namespace="gmd", parent=EX_GeographicBoundingBox)
-                        westBoundLongitudeDecimal <- newXMLNode(name="Decimal", namespace="gco", parent=westBoundLongitude)
-                          addChildren(westBoundLongitudeDecimal, input$westBoundLong)         
-                      eastBoundLongitude <- newXMLNode(name="eastBoundLongitude", namespace="gmd", parent=EX_GeographicBoundingBox)
-                        eastBoundLongitudeDecimal <- newXMLNode(name="Decimal", namespace="gco", parent=eastBoundLongitude)
-                          addChildren(eastBoundLongitudeDecimal, input$eastBoundLong)
-                      southBoundLatitude <- newXMLNode(name="southBoundLatitude", namespace="gmd", parent=EX_GeographicBoundingBox)
-                        southBoundLatitudeDecimal <- newXMLNode(name="Decimal", namespace="gco", parent=southBoundLatitude)
-                          addChildren(southBoundLatitudeDecimal, input$southBoundLat)
-                      northBoundLatitude <- newXMLNode(name="northBoundLatitude", namespace="gmd", parent=EX_GeographicBoundingBox)
-                        northBoundLatitudeDecimal <- newXMLNode(name="Decimal", namespace="gco", parent=northBoundLatitude)
-                          addChildren(northBoundLatitudeDecimal, input$northBoundLat)
-                  temporalElement <- newXMLNode(name="temporalElement", namespace="gmd", parent=EX_Extent)
-                    EX_TemporalExtent <- newXMLNode(name="EX_TemporalExtent", namespace="gmd", parent=temporalElement)
-                      extentTemporalElement <- newXMLNode(name="extent", namespace="gmd", parent=EX_TemporalExtent)
-                        timePeriodTemporalElement <- newXMLNode(name="TimePeriod", namespace="gml", attrs=c("gml:id"="T001"), parent=extentTemporalElement)
-                          beginPositionTemporalElement <- newXMLNode(name="beginPosition", namespace="gml", parent=timePeriodTemporalElement)
-                          endPositionTemporalElement <- newXMLNode(name="endPosition", namespace="gml", parent=timePeriodTemporalElement)
-                            
-                  distributionInfo <- newXMLNode("distributionInfo", namespace="gmd", parent=MD_Metadata)
-                    MD_Distribution <- newXMLNode("MD_Distribution", namespace="gmd", parent=distributionInfo)
-                      distributorDI <- newXMLNode("distributor", namespace="gmd", parent=MD_Distribution)
-                        MD_Distributor <- newXMLNode("MD_Distributor", namespace="gmd", parent=distributorDI)
-                          distributorContact <- newXMLNode("distributorContact", namespace="gmd", parent=MD_Distributor)
-                            CI_ResponsiblePartyDI <- newXMLNode("CI_ResponsibleParty", namespace="gmd", attrs=c("id"="contact-distributor"), parent=distributorContact)
-                              individualNameDI <- newXMLNode(name="individualName", namespace="gmd", parent=CI_ResponsiblePartyDI)
-                                CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=individualNameDI)
-                                  addChildren(CharacterString, input$dIndName)
-                              organisationNameDI <- newXMLNode(name="organisationName", namespace="gmd", parent=CI_ResponsiblePartyDI)
-                                CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=organisationNameDI)
-                                  addChildren(CharacterString, input$dOrgName)
-                              positionNameDI <- newXMLNode(name="positionName", namespace="gmd", parent=CI_ResponsiblePartyDI)
-                                CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=positionNameDI)
-                                  addChildren(CharacterString, input$dPosName)      
-                              contactInfoDI <- newXMLNode(name="contactInfo", namespace="gmd", parent=CI_ResponsiblePartyDI)
-                                CI_ContactDI <- newXMLNode(name="CI_Contact", namespace="gmd", parent=contactInfoDI)
-                                  phoneContactInfoDI <- newXMLNode(name="phone", namespace="gmd", parent=CI_ContactDI)
-                                    CI_TelephoneDI <- newXMLNode(name="CI_Telephone", namespace="gmd", parent=phoneContactInfoDI)
-                                      voiceDI <- newXMLNode(name="voice", namespace="gmd", parent=CI_TelephoneDI)
-                                        CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=voiceDI)
-                                          addChildren(CharacterString, input$dPhone) 
-                                      facsimileDI <- newXMLNode(name="facsimile", namespace="gmd", parent=CI_TelephoneDI)
-                                        CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=facsimileDI)
-                                          addChildren(CharacterString, input$dFax) 
-                                  addressContactInfoDI <- newXMLNode(name="address", namespace="gmd", parent=CI_ContactDI)
-                                    CI_AddressDI <- newXMLNode(name="CI_Address", namespace="gmd", parent=addressContactInfoDI)
-                                      deliveryPointDI <- newXMLNode(name="deliveryPoint", namespace="gmd", parent=CI_AddressDI)
-                                        CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=deliveryPointDI)
-                                          addChildren(CharacterString, input$dDelivPoint) 
-                                      cityAddressDI <- newXMLNode(name="city", namespace="gmd", parent=CI_AddressDI)
-                                        CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=cityAddressDI)
-                                          addChildren(CharacterString, input$dCity) 
-                                      administrativeAreaDI <- newXMLNode(name="administrativeArea", namespace="gmd", parent=CI_AddressDI)
-                                        CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=administrativeAreaDI)
-                                          addChildren(CharacterString, input$dAdminArea) 
-                                      postalCodeDI <- newXMLNode(name="postalCode", namespace="gmd", parent=CI_AddressDI)
-                                        CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=postalCodeDI)
-                                          addChildren(CharacterString, input$dPostCode) 
-                                      countryAddressDI <- newXMLNode(name="country", namespace="gmd", parent=CI_AddressDI)
-                                        CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=countryAddressDI)
-                                          addChildren(CharacterString, input$dCountry) 
-                                      electronicMailAddressDI <- newXMLNode(name="electronicMailAddress", namespace="gmd", parent=CI_AddressDI)
-                                        CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=electronicMailAddressDI)
-                                          addChildren(CharacterString, input$dEmailAdd) 
-                                  onlineResourceDI <- newXMLNode(name="onlineResource", namespace="gmd", parent=CI_ContactDI)
-                                    CI_OnlineResourceDI <- newXMLNode(name="CI_OnlineResource", namespace="gmd", parent=onlineResourceDI)
-                                      linkageOnlineResourceDI <- newXMLNode(name="linkage", namespace="gmd", parent=CI_OnlineResourceDI)
-                                        linkageURLDI <- newXMLNode(name="URL", namespace="gmd", parent=linkageOnlineResourceDI)
-                                          addChildren(linkageURLDI, input$dLinkage) 
-                                      protocolOnlineResourceDI <- newXMLNode(name="protocol", namespace="gmd", parent=CI_OnlineResourceDI)
-                                        CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=protocolOnlineResourceDI)
-                                          addChildren(CharacterString, input$dProtocol) 
-                                      functionOnlineResourceDI <- newXMLNode(name="function", namespace="gmd", parent=CI_OnlineResourceDI)
-                                        CI_OnLineFunctionCodeDI <- newXMLNode(name="CI_OnLineFunctionCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#CI_OnLineFunctionCode", "codeListValue"="information", "codeSpace"="ISOTC211/19115"), parent=functionOnlineResourceDI)
-                                          addChildren(CI_OnLineFunctionCodeDI, input$dFunction) 
-                                  hoursOfServiceDI <- newXMLNode(name="hoursOfService", namespace="gmd", parent=CI_ContactDI)
-                                    CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=hoursOfServiceDI)
-                                      addChildren(CharacterString, input$dHOfService) 
-                                  contactInstructionsDI <- newXMLNode(name="contactInstructions", namespace="gmd", parent=CI_ContactDI)
-                                    CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=contactInstructionsDI)
-                                      addChildren(CharacterString, input$dContInstructions)         
-                              roleContactDI <- newXMLNode(name="role", namespace="gmd", parent=CI_ResponsiblePartyDI)
-                                CI_RoleCodeDI <- newXMLNode(name="CI_RoleCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#CI_RoleCode", "codeListValue"="pointOfContact", "codeSpace"="ISOTC211/19115"), parent=roleContactDI)
-                                  addChildren(CI_RoleCodeDI, input$dRole)
-                      transferOptionsDI <- newXMLNode("transferOptions", namespace="gmd", parent=MD_Distribution)
-                        MD_DigitalTransferOptions <- newXMLNode("MD_DigitalTransferOptions", namespace="gmd", parent=transferOptionsDI)
-                          onlineWFS <- newXMLNode("MD_DigitalTransferOptions", namespace="gmd", parent=MD_DigitalTransferOptions)
-                            CI_OnlineResourceWFS <- newXMLNode("CI_OnlineResource", namespace="gmd", parent=onlineWFS)
-                              linkageWFS <- newXMLNode("linkage", namespace="gmd", parent=CI_OnlineResourceWFS)
-                                URLWFS <- newXMLNode(name="URL", namespace="gmd", parent=linkageWFS)
-                                  addChildren(URLWFS, input$WFSLinkage)
-                              protocolWFS <- newXMLNode("protocol", namespace="gmd", parent=CI_OnlineResourceWFS)
-                                CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=protocolWFS)
-                                  addChildren(CharacterString, input$WFSProtocol)
-                              nameWFS <- newXMLNode("name", namespace="gmd", parent=CI_OnlineResourceWFS)
-                                CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=nameWFS)
-                                  addChildren(CharacterString, input$WFSName)
-                              descriptionWFS <- newXMLNode("description", namespace="gmd", parent=CI_OnlineResourceWFS)
-                                CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=descriptionWFS)
-                                  addChildren(CharacterString, input$WFSDesc)
-                              functionWFS <- newXMLNode("function", namespace="gmd", parent=CI_OnlineResourceWFS)
-                                CI_OnLineFunctionCodeWFS <- newXMLNode(name="CI_OnLineFunctionCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#CI_OnLineFunctionCode", "codeListValue"="download", "codeSpace"="ISOTC211/19115"), parent=functionWFS)
-                                  addChildren(CI_OnLineFunctionCodeWFS, input$WFSFunc)
-                          onlineWMS <- newXMLNode("MD_DigitalTransferOptions", namespace="gmd", parent=MD_DigitalTransferOptions)
-                            CI_OnlineResourceWMS <- newXMLNode("CI_OnlineResource", namespace="gmd", parent=onlineWMS)
-                              linkageWMS <- newXMLNode("linkage", namespace="gmd", parent=CI_OnlineResourceWMS)
-                                URLWMS <- newXMLNode(name="URL", namespace="gmd", parent=linkageWMS)
-                                  addChildren(URLWMS, input$WMSLinkage)
-                              protocolWMS <- newXMLNode("protocol", namespace="gmd", parent=CI_OnlineResourceWMS)
-                                CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=protocolWMS)
-                                  addChildren(CharacterString, input$WMSProtocol)
-                              nameWMS <- newXMLNode("name", namespace="gmd", parent=CI_OnlineResourceWMS)
-                                CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=nameWMS)
-                                  addChildren(CharacterString, input$WMSName)
-                              descriptionWMS <- newXMLNode("description", namespace="gmd", parent=CI_OnlineResourceWMS)
-                                CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=descriptionWMS)
-                                  addChildren(CharacterString, input$WMSDesc)
-                              functionWMS <- newXMLNode("function", namespace="gmd", parent=CI_OnlineResourceWMS)
-                                CI_OnLineFunctionCodeWMS <- newXMLNode(name="CI_OnLineFunctionCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#CI_OnLineFunctionCode", "codeListValue"="download", "codeSpace"="ISOTC211/19115"), parent=functionWMS)
-                                  addChildren(CI_OnLineFunctionCodeWMS, input$WMSFunc)
-                          onlineZIP <- newXMLNode("MD_DigitalTransferOptions", namespace="gmd", parent=MD_DigitalTransferOptions)
-                            CI_OnlineResourceZIP <- newXMLNode("CI_OnlineResource", namespace="gmd", parent=onlineZIP)
-                              linkageZIP <- newXMLNode("linkage", namespace="gmd", parent=CI_OnlineResourceZIP)
-                                URLZIP <- newXMLNode(name="URL", namespace="gmd", parent=linkageZIP)
-                                  addChildren(URLZIP, input$ZIPLinkage)
-                              protocolZIP <- newXMLNode("protocol", namespace="gmd", parent=CI_OnlineResourceZIP)
-                                CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=protocolZIP)
-                                  addChildren(CharacterString, input$ZIPProtocol)
-                              nameZIP <- newXMLNode("name", namespace="gmd", parent=CI_OnlineResourceZIP)
-                                CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=nameZIP)
-                                  addChildren(CharacterString, input$ZIPName)
-                              descriptionZIP <- newXMLNode("description", namespace="gmd", parent=CI_OnlineResourceZIP)
-                                CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=descriptionZIP)
-                                  addChildren(CharacterString, input$ZIPDesc)
-                              functionZIP <- newXMLNode("function", namespace="gmd", parent=CI_OnlineResourceZIP)
-                                CI_OnLineFunctionCodeZIP <- newXMLNode(name="CI_OnLineFunctionCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#CI_OnLineFunctionCode", "codeListValue"="download", "codeSpace"="ISOTC211/19115"), parent=functionZIP)
-                                  addChildren(CI_OnLineFunctionCodeZIP, input$ZIPFunc)
-                          onlineImgWMS <- newXMLNode("MD_DigitalTransferOptions", namespace="gmd", parent=MD_DigitalTransferOptions)
-                            CI_OnlineResourceImgWMS <- newXMLNode("CI_OnlineResource", namespace="gmd", parent=onlineImgWMS)
-                              linkageImgWMS <- newXMLNode("linkage", namespace="gmd", parent=CI_OnlineResourceImgWMS)
-                                URLImgWMS <- newXMLNode(name="URL", namespace="gmd", parent=linkageImgWMS)
-                                  addChildren(URLImgWMS, input$IWMSLinkage)
-                              protocolImgWMS <- newXMLNode("protocol", namespace="gmd", parent=CI_OnlineResourceImgWMS)
-                                CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=protocolImgWMS)
-                                  addChildren(CharacterString, input$IWMSProtocol)
-                              nameImgWMS <- newXMLNode("name", namespace="gmd", parent=CI_OnlineResourceImgWMS)
-                                CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=nameImgWMS)
-                                  addChildren(CharacterString, input$IWMSName)
-                              descriptionImgWMS <- newXMLNode("description", namespace="gmd", parent=CI_OnlineResourceImgWMS)
-                                CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=descriptionImgWMS)
-                                  addChildren(CharacterString, input$IWMSDesc)
-                              functionImgWMS <- newXMLNode("function", namespace="gmd", parent=CI_OnlineResourceImgWMS)
-                                CI_OnLineFunctionCodeImgWMS <- newXMLNode(name="CI_OnLineFunctionCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#CI_OnLineFunctionCode", "codeListValue"="download", "codeSpace"="ISOTC211/19115"), parent=functionImgWMS)
-                                  addChildren(CI_OnLineFunctionCodeImgWMS, input$IWMSFunc)
-                  
-                  metadataMaintenance <- newXMLNode("metadataMaintenance", namespace="gmd", parent=MD_Metadata)    
-                    MD_MaintenanceInformation <- newXMLNode(name="MD_MaintenanceInformation", namespace="gmd", parent=metadataMaintenance)
-                    maintenanceAndUpdateFrequency <- newXMLNode(name="maintenanceAndUpdateFrequency", namespace="gmd", parent=MD_MaintenanceInformation)
-                      MD_MaintenanceFrequencyCode <- newXMLNode(name="MD_MaintenanceFrequencyCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#MD_MaintenanceFrequencyCode", "codeListValue"="asNeeded", "codeSpace"="ISOTC211/19115"), parent=maintenanceAndUpdateFrequency)
-                        addChildren(MD_MaintenanceFrequencyCode, input$updFreq)
-                    maintenanceNote <- newXMLNode(name="maintenanceNote", namespace="gmd", parent=MD_MaintenanceInformation)
-                      CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=maintenanceNote)
-                        addChildren(CharacterString, input$note)
-                  
-                  metadataConstraints <- newXMLNode("metadataConstraints", namespace="gmd", parent=MD_Metadata)
-                    MD_SecurityConstraints <- newXMLNode(name="MD_SecurityConstraints", namespace="gmd", parent=metadataConstraints)
-                    classification <- newXMLNode(name="classification", namespace="gmd", parent=MD_SecurityConstraints)
-                      MD_ClassClassificationCode <- newXMLNode(name="MD_ClassClassificationCode", namespace="gmd", attrs=c("codeList"="http://idec.icc.cat/schema/Codelist/ML_gmxCodelists.xml", "codeListValue"="restricted"), parent=classification)
-                    userNt <- newXMLNode(name="userNote", namespace="gmd", parent=MD_SecurityConstraints)
-                      CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=userNt)
-                        addChildren(CharacterString, input$userNote)                          
+      ###IdentificationInfo Node####            
+      identificationInfo <- newXMLNode("identificationInfo", namespace="gmd", parent=MD_Metadata)
+        MD_DataIdentification <- newXMLNode(name="MD_DataIdentification", namespace="gmd", parent=identificationInfo)
+          citationII <- newXMLNode(name="citation", namespace="gmd", parent=MD_DataIdentification)
+            CI_CitationII <- newXMLNode(name="CI_Citation", namespace="gmd", parent=citationII)
+              titleII <- newXMLNode(name="title", namespace="gmd", parent=CI_CitationII)
+                CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=titleII)
+                  addChildren(CharacterString, input$iiTitle)
+              dateII <- newXMLNode(name="date", namespace="gmd", parent=CI_CitationII)
+                CI_DateII <- newXMLNode(name="CI_Date", namespace="gmd", parent=dateII)
+                  dateCI_DateII <- newXMLNode(name="date", namespace="gmd", parent=CI_DateII)
+                    DateTimeDate <- newXMLNode(name="DateTime", namespace="gco", parent=dateCI_DateII)
+                      addChildren(DateTimeDate, input$iiDate)              
+                  dateTypeCI_DateII <- newXMLNode(name="dateType", namespace="gmd", parent=CI_DateII)
+                    CI_DateTypeCodeII <- newXMLNode(name="CI_DateTypeCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#CI_DateTypeCode", "codeListValue"="publication", "codeSpace"="ISOTC211/19115"), parent=dateTypeCI_DateII)
+                      addChildren(CI_DateTypeCodeII, input$iiDateType)
+          abstractII <- newXMLNode(name="abstract", namespace="gmd", parent=MD_DataIdentification)
+            CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=abstractII)
+              addChildren(CharacterString, input$iiAbstract)
+          statusII <- newXMLNode(name="status", namespace="gmd", parent=MD_DataIdentification)
+            MD_ProgressCode <- newXMLNode(name="MD_ProgressCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#MD_ProgressCode", "codeListValue"="", "codeSpace"="ISOTC211/19115"), parent=statusII)
+          resourceMaintenanceII <- newXMLNode(name="resourceMaintenance", namespace="gmd", parent=MD_DataIdentification)
+            MD_MaintenanceInformation <- newXMLNode(name="MD_MaintenanceInformation", namespace="gmd", parent=resourceMaintenanceII)
+              maintenanceAndUpdateFrequency <- newXMLNode(name="maintenanceAndUpdateFrequency", namespace="gmd", parent=MD_MaintenanceInformation)
+                MD_MaintenanceFrequencyCode <- newXMLNode(name="MD_MaintenanceFrequencyCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#MD_MaintenanceFrequencyCode", "codeListValue"="asNeeded", "codeSpace"="ISOTC211/19115"), parent=maintenanceAndUpdateFrequency)
+                  addChildren(MD_MaintenanceFrequencyCode, input$iiResMaintenance)
+          descriptiveKeywordsII <- newXMLNode(name="descriptiveKeywords", namespace="gmd", parent=MD_DataIdentification)
+            MD_Keywords <- newXMLNode(name="MD_Keywords", namespace="gmd", parent=descriptiveKeywordsII)
+              keywordDK <- newXMLNode(name="keyword", namespace="gmd", attrs=c("xsi:type"="gmd:PT_FreeText_PropertyType"), parent=MD_Keywords)
+                CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=keywordDK)
+                  addChildren(CharacterString, input$iiDescKey)
+                PT_FreeText <- newXMLNode(name="PT_FreeText", namespace="gmd", parent=keywordDK)
+                  textGroup <- newXMLNode(name="textGroup", namespace="gmd", parent=PT_FreeText)
+                    LocalisedCharacterString <- newXMLNode(name="LocalisedCharacterString", namespace="gmd", attrs=c("locale"="#locale-"), parent=PT_FreeText)
+              typeDK <- newXMLNode(name="type", namespace="gmd", parent=MD_Keywords)
+                MD_KeywordTypeCode <- newXMLNode(name="MD_KeywordTypeCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#MD_KeywordTypeCode", "codeListValue"="", "codeSpace"="ISOTC211/19115"), parent=typeDK)
+          resourceConstraintsII <- newXMLNode(name="resourceConstraints", namespace="gmd", parent=MD_DataIdentification)
+            MD_LegalConstraints <- newXMLNode(name="MD_LegalConstraints", namespace="gmd", parent=resourceConstraintsII)
+              accessConstraints <- newXMLNode(name="accessConstraints", namespace="gmd", parent=MD_LegalConstraints)
+                MD_RestrictionCode <- newXMLNode(name="MD_RestrictionCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#MD_RestrictionCode", "codeListValue"="otherRestrictions", "codeSpace"="ISOTC211/19115"), parent=accessConstraints)
+                  addChildren(MD_RestrictionCode, input$iiResCons)    
+          spatialRepresentationTypeII <- newXMLNode(name="spatialRepresentationType", namespace="gmd", parent=MD_DataIdentification)
+            MD_SpatialRepresentationTypeCode <- newXMLNode(name="MD_SpatialRepresentationTypeCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#MD_SpatialRepresentationTypeCode", "codeListValue"="vector", "codeSpace"="ISOTC211/19115"), parent=spatialRepresentationTypeII)
+              addChildren(MD_SpatialRepresentationTypeCode, input$iiSpatRepType)         
+          languageII <- newXMLNode(name="language", namespace="gmd", parent=MD_DataIdentification)
+            LanguageCodeII <- newXMLNode(name="LanguageCode", namespace="gmd", attrs=c("codeList"="http://www.loc.gov/standards/iso639-2/", "codeListValue"="ind", "codeSpace"="ISO 639-2"), parent=languageII)
+              addChildren(LanguageCodeII, input$iiLangIdent)        
+          characterSetII <- newXMLNode(name="characterSet", namespace="gmd", parent=MD_DataIdentification)
+            MD_CharacterSetCode <- newXMLNode(name="MD_CharacterSetCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#MD_CharacterSetCode", "codeListValue"="utf8", "codeSpace"="ISOTC211/19115"), parent=characterSetII)
+              addChildren(MD_CharacterSetCode, input$iiCharSetCode)
+          topicCategoryII <- newXMLNode(name="topicCategory", namespace="gmd", parent=MD_DataIdentification)
+            MD_TopicCategoryCode <- newXMLNode(name="MD_TopicCategoryCode", namespace="gmd", parent=topicCategoryII)
+              addChildren(MD_TopicCategoryCode, input$iiTopicCat)
+          extentII <- newXMLNode(name="extent", namespace="gmd", parent=MD_DataIdentification)
+            EX_Extent <- newXMLNode(name="EX_Extent", namespace="gmd", parent=extentII)
+              geographicElement <- newXMLNode(name="geographicElement", namespace="gmd", parent=EX_Extent)
+                EX_GeographicBoundingBox <- newXMLNode(name="EX_GeographicBoundingBox", namespace="gmd", parent=geographicElement)
+                  extentTypeCode <- newXMLNode(name="extentTypeCode", namespace="gmd", parent=EX_GeographicBoundingBox)
+                    extentTypeCodeBoolean <- newXMLNode(name="Boolean", namespace="gco", parent=extentTypeCode)
+                      addChildren(extentTypeCodeBoolean, "1")                
+                  westBoundLongitude <- newXMLNode(name="westBoundLongitude", namespace="gmd", parent=EX_GeographicBoundingBox)
+                    westBoundLongitudeDecimal <- newXMLNode(name="Decimal", namespace="gco", parent=westBoundLongitude)
+                      addChildren(westBoundLongitudeDecimal, input$westBoundLong)         
+                  eastBoundLongitude <- newXMLNode(name="eastBoundLongitude", namespace="gmd", parent=EX_GeographicBoundingBox)
+                    eastBoundLongitudeDecimal <- newXMLNode(name="Decimal", namespace="gco", parent=eastBoundLongitude)
+                      addChildren(eastBoundLongitudeDecimal, input$eastBoundLong)
+                  southBoundLatitude <- newXMLNode(name="southBoundLatitude", namespace="gmd", parent=EX_GeographicBoundingBox)
+                    southBoundLatitudeDecimal <- newXMLNode(name="Decimal", namespace="gco", parent=southBoundLatitude)
+                      addChildren(southBoundLatitudeDecimal, input$southBoundLat)
+                  northBoundLatitude <- newXMLNode(name="northBoundLatitude", namespace="gmd", parent=EX_GeographicBoundingBox)
+                    northBoundLatitudeDecimal <- newXMLNode(name="Decimal", namespace="gco", parent=northBoundLatitude)
+                      addChildren(northBoundLatitudeDecimal, input$northBoundLat)
+              temporalElement <- newXMLNode(name="temporalElement", namespace="gmd", parent=EX_Extent)
+                EX_TemporalExtent <- newXMLNode(name="EX_TemporalExtent", namespace="gmd", parent=temporalElement)
+                  extentTemporalElement <- newXMLNode(name="extent", namespace="gmd", parent=EX_TemporalExtent)
+                    timePeriodTemporalElement <- newXMLNode(name="TimePeriod", namespace="gml", attrs=c("gml:id"="T001"), parent=extentTemporalElement)
+                      beginPositionTemporalElement <- newXMLNode(name="beginPosition", namespace="gml", parent=timePeriodTemporalElement)
+                      endPositionTemporalElement <- newXMLNode(name="endPosition", namespace="gml", parent=timePeriodTemporalElement)
+      
+      ###DistributionInfo Node####                                  
+      distributionInfo <- newXMLNode("distributionInfo", namespace="gmd", parent=MD_Metadata)
+        MD_Distribution <- newXMLNode("MD_Distribution", namespace="gmd", parent=distributionInfo)
+          distributorDI <- newXMLNode("distributor", namespace="gmd", parent=MD_Distribution)
+            MD_Distributor <- newXMLNode("MD_Distributor", namespace="gmd", parent=distributorDI)
+              distributorContact <- newXMLNode("distributorContact", namespace="gmd", parent=MD_Distributor)
+                CI_ResponsiblePartyDI <- newXMLNode("CI_ResponsibleParty", namespace="gmd", attrs=c("id"="contact-distributor"), parent=distributorContact)
+                  individualNameDI <- newXMLNode(name="individualName", namespace="gmd", parent=CI_ResponsiblePartyDI)
+                    CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=individualNameDI)
+                      addChildren(CharacterString, input$dIndName)
+                  organisationNameDI <- newXMLNode(name="organisationName", namespace="gmd", parent=CI_ResponsiblePartyDI)
+                    CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=organisationNameDI)
+                      addChildren(CharacterString, input$dOrgName)
+                  positionNameDI <- newXMLNode(name="positionName", namespace="gmd", parent=CI_ResponsiblePartyDI)
+                    CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=positionNameDI)
+                      addChildren(CharacterString, input$dPosName)      
+                  contactInfoDI <- newXMLNode(name="contactInfo", namespace="gmd", parent=CI_ResponsiblePartyDI)
+                    CI_ContactDI <- newXMLNode(name="CI_Contact", namespace="gmd", parent=contactInfoDI)
+                      phoneContactInfoDI <- newXMLNode(name="phone", namespace="gmd", parent=CI_ContactDI)
+                        CI_TelephoneDI <- newXMLNode(name="CI_Telephone", namespace="gmd", parent=phoneContactInfoDI)
+                          voiceDI <- newXMLNode(name="voice", namespace="gmd", parent=CI_TelephoneDI)
+                            CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=voiceDI)
+                              addChildren(CharacterString, input$dPhone) 
+                          facsimileDI <- newXMLNode(name="facsimile", namespace="gmd", parent=CI_TelephoneDI)
+                            CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=facsimileDI)
+                              addChildren(CharacterString, input$dFax) 
+                      addressContactInfoDI <- newXMLNode(name="address", namespace="gmd", parent=CI_ContactDI)
+                        CI_AddressDI <- newXMLNode(name="CI_Address", namespace="gmd", parent=addressContactInfoDI)
+                          deliveryPointDI <- newXMLNode(name="deliveryPoint", namespace="gmd", parent=CI_AddressDI)
+                            CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=deliveryPointDI)
+                              addChildren(CharacterString, input$dDelivPoint) 
+                          cityAddressDI <- newXMLNode(name="city", namespace="gmd", parent=CI_AddressDI)
+                            CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=cityAddressDI)
+                              addChildren(CharacterString, input$dCity) 
+                          administrativeAreaDI <- newXMLNode(name="administrativeArea", namespace="gmd", parent=CI_AddressDI)
+                            CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=administrativeAreaDI)
+                              addChildren(CharacterString, input$dAdminArea) 
+                          postalCodeDI <- newXMLNode(name="postalCode", namespace="gmd", parent=CI_AddressDI)
+                            CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=postalCodeDI)
+                              addChildren(CharacterString, input$dPostCode) 
+                          countryAddressDI <- newXMLNode(name="country", namespace="gmd", parent=CI_AddressDI)
+                            CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=countryAddressDI)
+                              addChildren(CharacterString, input$dCountry) 
+                          electronicMailAddressDI <- newXMLNode(name="electronicMailAddress", namespace="gmd", parent=CI_AddressDI)
+                            CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=electronicMailAddressDI)
+                              addChildren(CharacterString, input$dEmailAdd) 
+                      onlineResourceDI <- newXMLNode(name="onlineResource", namespace="gmd", parent=CI_ContactDI)
+                        CI_OnlineResourceDI <- newXMLNode(name="CI_OnlineResource", namespace="gmd", parent=onlineResourceDI)
+                          linkageOnlineResourceDI <- newXMLNode(name="linkage", namespace="gmd", parent=CI_OnlineResourceDI)
+                            linkageURLDI <- newXMLNode(name="URL", namespace="gmd", parent=linkageOnlineResourceDI)
+                              addChildren(linkageURLDI, input$dLinkage) 
+                          protocolOnlineResourceDI <- newXMLNode(name="protocol", namespace="gmd", parent=CI_OnlineResourceDI)
+                            CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=protocolOnlineResourceDI)
+                              addChildren(CharacterString, input$dProtocol) 
+                          functionOnlineResourceDI <- newXMLNode(name="function", namespace="gmd", parent=CI_OnlineResourceDI)
+                            CI_OnLineFunctionCodeDI <- newXMLNode(name="CI_OnLineFunctionCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#CI_OnLineFunctionCode", "codeListValue"="information", "codeSpace"="ISOTC211/19115"), parent=functionOnlineResourceDI)
+                              addChildren(CI_OnLineFunctionCodeDI, input$dFunction) 
+                      hoursOfServiceDI <- newXMLNode(name="hoursOfService", namespace="gmd", parent=CI_ContactDI)
+                        CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=hoursOfServiceDI)
+                          addChildren(CharacterString, input$dHOfService) 
+                      contactInstructionsDI <- newXMLNode(name="contactInstructions", namespace="gmd", parent=CI_ContactDI)
+                        CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=contactInstructionsDI)
+                          addChildren(CharacterString, input$dContInstructions)         
+                  roleContactDI <- newXMLNode(name="role", namespace="gmd", parent=CI_ResponsiblePartyDI)
+                    CI_RoleCodeDI <- newXMLNode(name="CI_RoleCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#CI_RoleCode", "codeListValue"="pointOfContact", "codeSpace"="ISOTC211/19115"), parent=roleContactDI)
+                      addChildren(CI_RoleCodeDI, input$dRole)
+          ###TransferOptions Node####
+          transferOptionsDI <- newXMLNode("transferOptions", namespace="gmd", parent=MD_Distribution)
+            MD_DigitalTransferOptions <- newXMLNode("MD_DigitalTransferOptions", namespace="gmd", parent=transferOptionsDI)
+              onlineWFS <- newXMLNode("MD_DigitalTransferOptions", namespace="gmd", parent=MD_DigitalTransferOptions)
+                CI_OnlineResourceWFS <- newXMLNode("CI_OnlineResource", namespace="gmd", parent=onlineWFS)
+                  linkageWFS <- newXMLNode("linkage", namespace="gmd", parent=CI_OnlineResourceWFS)
+                    URLWFS <- newXMLNode(name="URL", namespace="gmd", parent=linkageWFS)
+                      addChildren(URLWFS, input$WFSLinkage)
+                  protocolWFS <- newXMLNode("protocol", namespace="gmd", parent=CI_OnlineResourceWFS)
+                    CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=protocolWFS)
+                      addChildren(CharacterString, input$WFSProtocol)
+                  nameWFS <- newXMLNode("name", namespace="gmd", parent=CI_OnlineResourceWFS)
+                    CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=nameWFS)
+                      addChildren(CharacterString, input$WFSName)
+                  descriptionWFS <- newXMLNode("description", namespace="gmd", parent=CI_OnlineResourceWFS)
+                    CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=descriptionWFS)
+                      addChildren(CharacterString, input$WFSDesc)
+                  functionWFS <- newXMLNode("function", namespace="gmd", parent=CI_OnlineResourceWFS)
+                    CI_OnLineFunctionCodeWFS <- newXMLNode(name="CI_OnLineFunctionCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#CI_OnLineFunctionCode", "codeListValue"="download", "codeSpace"="ISOTC211/19115"), parent=functionWFS)
+                      addChildren(CI_OnLineFunctionCodeWFS, input$WFSFunc)
+              onlineWMS <- newXMLNode("MD_DigitalTransferOptions", namespace="gmd", parent=MD_DigitalTransferOptions)
+                CI_OnlineResourceWMS <- newXMLNode("CI_OnlineResource", namespace="gmd", parent=onlineWMS)
+                  linkageWMS <- newXMLNode("linkage", namespace="gmd", parent=CI_OnlineResourceWMS)
+                    URLWMS <- newXMLNode(name="URL", namespace="gmd", parent=linkageWMS)
+                      addChildren(URLWMS, input$WMSLinkage)
+                  protocolWMS <- newXMLNode("protocol", namespace="gmd", parent=CI_OnlineResourceWMS)
+                    CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=protocolWMS)
+                      addChildren(CharacterString, input$WMSProtocol)
+                  nameWMS <- newXMLNode("name", namespace="gmd", parent=CI_OnlineResourceWMS)
+                    CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=nameWMS)
+                      addChildren(CharacterString, input$WMSName)
+                  descriptionWMS <- newXMLNode("description", namespace="gmd", parent=CI_OnlineResourceWMS)
+                    CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=descriptionWMS)
+                      addChildren(CharacterString, input$WMSDesc)
+                  functionWMS <- newXMLNode("function", namespace="gmd", parent=CI_OnlineResourceWMS)
+                    CI_OnLineFunctionCodeWMS <- newXMLNode(name="CI_OnLineFunctionCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#CI_OnLineFunctionCode", "codeListValue"="download", "codeSpace"="ISOTC211/19115"), parent=functionWMS)
+                      addChildren(CI_OnLineFunctionCodeWMS, input$WMSFunc)
+              onlineZIP <- newXMLNode("MD_DigitalTransferOptions", namespace="gmd", parent=MD_DigitalTransferOptions)
+                CI_OnlineResourceZIP <- newXMLNode("CI_OnlineResource", namespace="gmd", parent=onlineZIP)
+                  linkageZIP <- newXMLNode("linkage", namespace="gmd", parent=CI_OnlineResourceZIP)
+                    URLZIP <- newXMLNode(name="URL", namespace="gmd", parent=linkageZIP)
+                      addChildren(URLZIP, input$ZIPLinkage)
+                  protocolZIP <- newXMLNode("protocol", namespace="gmd", parent=CI_OnlineResourceZIP)
+                    CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=protocolZIP)
+                      addChildren(CharacterString, input$ZIPProtocol)
+                  nameZIP <- newXMLNode("name", namespace="gmd", parent=CI_OnlineResourceZIP)
+                    CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=nameZIP)
+                      addChildren(CharacterString, input$ZIPName)
+                  descriptionZIP <- newXMLNode("description", namespace="gmd", parent=CI_OnlineResourceZIP)
+                    CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=descriptionZIP)
+                      addChildren(CharacterString, input$ZIPDesc)
+                  functionZIP <- newXMLNode("function", namespace="gmd", parent=CI_OnlineResourceZIP)
+                    CI_OnLineFunctionCodeZIP <- newXMLNode(name="CI_OnLineFunctionCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#CI_OnLineFunctionCode", "codeListValue"="download", "codeSpace"="ISOTC211/19115"), parent=functionZIP)
+                      addChildren(CI_OnLineFunctionCodeZIP, input$ZIPFunc)
+              onlineImgWMS <- newXMLNode("MD_DigitalTransferOptions", namespace="gmd", parent=MD_DigitalTransferOptions)
+                CI_OnlineResourceImgWMS <- newXMLNode("CI_OnlineResource", namespace="gmd", parent=onlineImgWMS)
+                  linkageImgWMS <- newXMLNode("linkage", namespace="gmd", parent=CI_OnlineResourceImgWMS)
+                    URLImgWMS <- newXMLNode(name="URL", namespace="gmd", parent=linkageImgWMS)
+                      addChildren(URLImgWMS, input$IWMSLinkage)
+                  protocolImgWMS <- newXMLNode("protocol", namespace="gmd", parent=CI_OnlineResourceImgWMS)
+                    CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=protocolImgWMS)
+                      addChildren(CharacterString, input$IWMSProtocol)
+                  nameImgWMS <- newXMLNode("name", namespace="gmd", parent=CI_OnlineResourceImgWMS)
+                    CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=nameImgWMS)
+                      addChildren(CharacterString, input$IWMSName)
+                  descriptionImgWMS <- newXMLNode("description", namespace="gmd", parent=CI_OnlineResourceImgWMS)
+                    CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=descriptionImgWMS)
+                      addChildren(CharacterString, input$IWMSDesc)
+                  functionImgWMS <- newXMLNode("function", namespace="gmd", parent=CI_OnlineResourceImgWMS)
+                    CI_OnLineFunctionCodeImgWMS <- newXMLNode(name="CI_OnLineFunctionCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#CI_OnLineFunctionCode", "codeListValue"="download", "codeSpace"="ISOTC211/19115"), parent=functionImgWMS)
+                      addChildren(CI_OnLineFunctionCodeImgWMS, input$IWMSFunc)
+      
+      ###MetadataMaintenance Node####
+      metadataMaintenance <- newXMLNode("metadataMaintenance", namespace="gmd", parent=MD_Metadata)    
+        MD_MaintenanceInformation <- newXMLNode(name="MD_MaintenanceInformation", namespace="gmd", parent=metadataMaintenance)
+        maintenanceAndUpdateFrequency <- newXMLNode(name="maintenanceAndUpdateFrequency", namespace="gmd", parent=MD_MaintenanceInformation)
+          MD_MaintenanceFrequencyCode <- newXMLNode(name="MD_MaintenanceFrequencyCode", namespace="gmd", attrs=c("codeList"="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#MD_MaintenanceFrequencyCode", "codeListValue"="asNeeded", "codeSpace"="ISOTC211/19115"), parent=maintenanceAndUpdateFrequency)
+            addChildren(MD_MaintenanceFrequencyCode, input$updFreq)
+        maintenanceNote <- newXMLNode(name="maintenanceNote", namespace="gmd", parent=MD_MaintenanceInformation)
+          CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=maintenanceNote)
+            addChildren(CharacterString, input$note)
+      
+      ###MetadataConstraints Node####
+      metadataConstraints <- newXMLNode("metadataConstraints", namespace="gmd", parent=MD_Metadata)
+        MD_SecurityConstraints <- newXMLNode(name="MD_SecurityConstraints", namespace="gmd", parent=metadataConstraints)
+        classification <- newXMLNode(name="classification", namespace="gmd", parent=MD_SecurityConstraints)
+          MD_ClassClassificationCode <- newXMLNode(name="MD_ClassClassificationCode", namespace="gmd", attrs=c("codeList"="http://idec.icc.cat/schema/Codelist/ML_gmxCodelists.xml", "codeListValue"="restricted"), parent=classification)
+        userNt <- newXMLNode(name="userNote", namespace="gmd", parent=MD_SecurityConstraints)
+          CharacterString <- newXMLNode(name="CharacterString", namespace="gco", parent=userNt)
+            addChildren(CharacterString, input$userNote)                          
                                             
-              
-    saveXML(csw, file="coba.xml", encoding="UTF-8", indent=T)
+    ###*Write Input Into XMLs####          
+    saveXML(csw, file="metadata.xml", encoding="UTF-8", indent=T)
 
+    ###*Insert Table Metadata####
+    tblMetadata <- data.frame(
+      file_identifier=input$fileIdentifier,
+      lang=input$lang,
+      character_set=input$charSet,
+      hierarchy_level=input$hieLvl,
+      md_std_name=input$mdStdName,
+      md_std_ver=input$mdStdVer,
+      date_stamp=input$dateStamp,
+      data_set_uri=input$mdDataSetURI,
+      individual_name=input$indName,
+      organisation_name=input$orgName,
+      position_name=input$posName,
+      phone=input$phone,
+      faximile=input$fax,
+      delivery_point=input$delivPoint,
+      city=input$city,
+      admin_area=input$adminArea,
+      postal_code=input$postCode,
+      country=input$country,
+      email_address=input$emailAdd,
+      linkage=input$linkage,
+      protocol=input$protocol,
+      contact_function=input$contFunction,
+      hours_of_service=input$hOfService,
+      contact_instructions=input$contInstructions,
+      contact_role=input$contRole,
+      topology_level=input$topoLvl,
+      geometry_objects=input$geomObj,
+      num_of_dim='',
+      corner_points='',
+      point_in_pixel='',
+      axis_dim_prop='',
+      dim_name='',
+      dim_size='',
+      cell_geometry='',
+      check_point_avail='',
+      control_point_avail='',
+      georef_parameters='',
+      object_type='',
+      rs_title=input$rsTitle,
+      rs_date=input$rsDate,
+      rs_date_type=input$rsDateType,
+      rs_org_name=input$rsOrgName,
+      rs_linkage=input$rsLinkage,
+      rs_role=input$rsRole,
+      rs_code=input$rsCode,
+      rs_version=input$rsVersion,
+      rs_name='',
+      rs_crs='',
+      rs_semi_major_axis='',
+      rs_axis_unit='',
+      ii_citation='',
+      ii_title=input$iiTitle,
+      ii_date=input$iiDate,
+      ii_date_type=input$iiDateType,
+      ii_abstract=input$iiAbstract,
+      ii_res_maintenance=input$iiResMaintenance,
+      ii_desc_keywords=input$iiDescKey,
+      ii_spat_resolution='',
+      ii_res_const=input$iiResCons,
+      ii_spat_rep_type=input$iiSpatRepType,
+      ii_lang_id=input$iiLangIdent,
+      ii_char_set_code=input$iiCharSetCode,
+      ii_topic_category=input$iiTopicCat,
+      ii_west_bound_long=input$westBoundLong,
+      ii_east_bound_long=input$eastBoundLong,
+      ii_south_bound_lat=input$southBoundLat,
+      ii_north_bound_lat=input$northBoundLat,
+      d_individual_name=input$dIndName,
+      d_organisation_name=input$dOrgName,
+      d_position_name=input$dPosName,
+      d_phone=input$dPhone,
+      d_faximile=input$dFax,
+      d_delivery_point=input$dDelivPoint,
+      d_city=input$dCity,
+      d_admin_area=input$dAdminArea,
+      d_postal_code=input$dPostCode,
+      d_country=input$dCountry,
+      d_email_address=input$dEmailAdd,
+      d_linkage=input$dLinkage,
+      d_protocol=input$dProtocol,
+      d_contact_function=input$dFunction,
+      d_hours_of_service=input$dHOfService,
+      d_contact_instructions=input$dContInstructions,
+      d_contact_role=input$dRole,
+      to_wfs_linkage=input$WFSLinkage,
+      to_wfs_protocol=input$WFSProtocol,
+      to_wfs_name=input$WFSName,
+      to_wfs_desc=input$WFSDesc,
+      to_wfs_function=input$WFSFunc,
+      to_wms_linkage=input$WMSLinkage,
+      to_wms_protocol=input$WMSProtocol,
+      to_wms_name=input$WMSName,
+      to_wms_desc=input$WMSDesc,
+      to_wms_function=input$WMSFunc,
+      to_zip_linkage=input$ZIPLinkage,
+      to_zip_protocol=input$ZIPProtocol,
+      to_zip_name=input$ZIPName,
+      to_zip_desc=input$ZIPDesc,
+      to_zip_function=input$ZIPFunc,
+      to_iwms_linkage=input$IWMSLinkage,
+      to_iwms_protocol=input$IWMSProtocol,
+      to_iwms_name=input$IWMSName,
+      to_iwms_desc=input$IWMSDesc,
+      to_iwms_function=input$IWMSFunc,
+      maintenance_updatefreq='',
+      maintenance_note='',
+      user_note=input$userNote,
+      row.names=NULL
+    )
+    dbWriteTable(DB, "metadata", tblMetadata, append=TRUE, row.names=FALSE)
+    
   })
   
 }
 
-# Run the application 
+###*Run the application#### 
 shinyApp(ui = ui, server = server)
 

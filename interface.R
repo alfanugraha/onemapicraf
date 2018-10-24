@@ -33,7 +33,8 @@ navbarPage(title = appsTitle, theme = shinytheme("cerulean"),
                        textInput(ctEntity$vars[13], ctEntity$name[13], value="", width=NULL, placeholder=""),
                        textInput(ctEntity$vars[14], ctEntity$name[14], value="", width=NULL, placeholder=""),
                        textInput(ctEntity$vars[15], ctEntity$name[15], value="", width=NULL, placeholder=""),
-                       textInput(ctEntity$vars[16], ctEntity$name[16], value="", width=NULL, placeholder="")
+                       textInput(ctEntity$vars[16], ctEntity$name[16], value="", width=NULL, placeholder=""),
+                       textInput(ctEntity$vars[17], ctEntity$name[17], value="", width=NULL, placeholder="")
               ),
               tabPanel(appsMenu$menuItem[3],
                        textInput(sriEntity$vars[1], sriEntity$name[1], value="", width=NULL, placeholder=""),
@@ -99,36 +100,37 @@ navbarPage(title = appsTitle, theme = shinytheme("cerulean"),
                        textInput(disInfoEntity$vars[13], disInfoEntity$name[13], value="", width=NULL, placeholder=""),
                        textInput(disInfoEntity$vars[14], disInfoEntity$name[14], value="", width=NULL, placeholder=""),
                        textInput(disInfoEntity$vars[15], disInfoEntity$name[15], value="", width=NULL, placeholder=""),
-                       textInput(disInfoEntity$vars[16], disInfoEntity$name[16], value="", width=NULL, placeholder="")
+                       textInput(disInfoEntity$vars[16], disInfoEntity$name[16], value="", width=NULL, placeholder=""),
+                       textInput(disInfoEntity$vars[17], disInfoEntity$name[17], value="", width=NULL, placeholder="")
               ),
               tabPanel(appsMenu$menuItem[7],
                        box(title = "Transfer Options WFS", solidHeader = TRUE, collapsible = TRUE, 
-                         textInput(paste0(trfOptWFSEntity$vars[1], "WFS"), trfOptWFSEntity$name[1], value="", width=NULL, placeholder=""),
-                         textInput(paste0(trfOptWFSEntity$vars[2], "WFS"), trfOptWFSEntity$name[2], value="", width=NULL, placeholder=""),
-                         textInput(paste0(trfOptWFSEntity$vars[3], "WFS"), trfOptWFSEntity$name[3], value="", width=NULL, placeholder=""),
-                         textInput(paste0(trfOptWFSEntity$vars[4], "WFS"), trfOptWFSEntity$name[4], value="RAW", width=NULL, placeholder=""),
-                         textInput(paste0(trfOptWFSEntity$vars[5], "WFS"), trfOptWFSEntity$name[5], value="", width=NULL, placeholder="")
+                         textInput(paste0(trfOptWFSEntity$vars[1]), trfOptWFSEntity$name[1], value="", width=NULL, placeholder=""),
+                         textInput(paste0(trfOptWFSEntity$vars[2]), trfOptWFSEntity$name[2], value="", width=NULL, placeholder=""),
+                         textInput(paste0(trfOptWFSEntity$vars[3]), trfOptWFSEntity$name[3], value="", width=NULL, placeholder=""),
+                         textInput(paste0(trfOptWFSEntity$vars[4]), trfOptWFSEntity$name[4], value="RAW", width=NULL, placeholder=""),
+                         textInput(paste0(trfOptWFSEntity$vars[5]), trfOptWFSEntity$name[5], value="", width=NULL, placeholder="")
                        ),
                        box(title = "Transfer Options WMS", solidHeader = TRUE, collapsible = TRUE, 
-                           textInput(paste0(trfOptWMSEntity$vars[1], "WMS"), trfOptWMSEntity$name[1], value="", width=NULL, placeholder=""),
-                           textInput(paste0(trfOptWMSEntity$vars[2], "WMS"), trfOptWMSEntity$name[2], value="", width=NULL, placeholder=""),
-                           textInput(paste0(trfOptWMSEntity$vars[3], "WMS"), trfOptWMSEntity$name[3], value="", width=NULL, placeholder=""),
-                           textInput(paste0(trfOptWMSEntity$vars[4], "WMS"), trfOptWMSEntity$name[4], value="ImageWMS", width=NULL, placeholder=""),
-                           textInput(paste0(trfOptWMSEntity$vars[5], "WMS"), trfOptWMSEntity$name[5], value="", width=NULL, placeholder="")
+                           textInput(paste0(trfOptWMSEntity$vars[1]), trfOptWMSEntity$name[1], value="", width=NULL, placeholder=""),
+                           textInput(paste0(trfOptWMSEntity$vars[2]), trfOptWMSEntity$name[2], value="", width=NULL, placeholder=""),
+                           textInput(paste0(trfOptWMSEntity$vars[3]), trfOptWMSEntity$name[3], value="", width=NULL, placeholder=""),
+                           textInput(paste0(trfOptWMSEntity$vars[4]), trfOptWMSEntity$name[4], value="ImageWMS", width=NULL, placeholder=""),
+                           textInput(paste0(trfOptWMSEntity$vars[5]), trfOptWMSEntity$name[5], value="", width=NULL, placeholder="")
                        ),
                        box(title = "Transfer Options ZIP Shapefile", solidHeader = TRUE, collapsible = TRUE, 
-                           textInput(paste0(trfOptZIPEntity$vars[1], "ZIP"), trfOptZIPEntity$name[1], value="", width=NULL, placeholder=""),
-                           textInput(paste0(trfOptZIPEntity$vars[2], "ZIP"), trfOptZIPEntity$name[2], value="", width=NULL, placeholder=""),
-                           textInput(paste0(trfOptZIPEntity$vars[3], "ZIP"), trfOptZIPEntity$name[3], value="", width=NULL, placeholder=""),
-                           textInput(paste0(trfOptZIPEntity$vars[4], "ZIP"), trfOptZIPEntity$name[4], value="ZIP Shapefile", width=NULL, placeholder=""),
-                           textInput(paste0(trfOptZIPEntity$vars[5], "ZIP"), trfOptZIPEntity$name[5], value="", width=NULL, placeholder="")
+                           textInput(paste0(trfOptZIPEntity$vars[1]), trfOptZIPEntity$name[1], value="", width=NULL, placeholder=""),
+                           textInput(paste0(trfOptZIPEntity$vars[2]), trfOptZIPEntity$name[2], value="", width=NULL, placeholder=""),
+                           textInput(paste0(trfOptZIPEntity$vars[3]), trfOptZIPEntity$name[3], value="", width=NULL, placeholder=""),
+                           textInput(paste0(trfOptZIPEntity$vars[4]), trfOptZIPEntity$name[4], value="ZIP Shapefile", width=NULL, placeholder=""),
+                           textInput(paste0(trfOptZIPEntity$vars[5]), trfOptZIPEntity$name[5], value="", width=NULL, placeholder="")
                        ),
                        box(title = "Transfer Options ImageWFS", solidHeader = TRUE, collapsible = TRUE, 
-                            textInput(paste0(trfOptIWMSEntity$vars[1], "ImageWFS"), trfOptIWMSEntity$name[1], value="", width=NULL, placeholder=""),
-                            textInput(paste0(trfOptIWMSEntity$vars[2], "ImageWFS"), trfOptIWMSEntity$name[2], value="", width=NULL, placeholder=""),
-                            textInput(paste0(trfOptIWMSEntity$vars[3], "ImageWFS"), trfOptIWMSEntity$name[3], value="", width=NULL, placeholder=""),
-                            textInput(paste0(trfOptIWMSEntity$vars[4], "ImageWFS"), trfOptIWMSEntity$name[4], value="ImageWMS", width=NULL, placeholder=""),
-                            textInput(paste0(trfOptIWMSEntity$vars[5], "ImageWFS"), trfOptIWMSEntity$name[5], value="", width=NULL, placeholder="")
+                            textInput(paste0(trfOptIWMSEntity$vars[1]), trfOptIWMSEntity$name[1], value="", width=NULL, placeholder=""),
+                            textInput(paste0(trfOptIWMSEntity$vars[2]), trfOptIWMSEntity$name[2], value="", width=NULL, placeholder=""),
+                            textInput(paste0(trfOptIWMSEntity$vars[3]), trfOptIWMSEntity$name[3], value="", width=NULL, placeholder=""),
+                            textInput(paste0(trfOptIWMSEntity$vars[4]), trfOptIWMSEntity$name[4], value="ImageWMS", width=NULL, placeholder=""),
+                            textInput(paste0(trfOptIWMSEntity$vars[5]), trfOptIWMSEntity$name[5], value="", width=NULL, placeholder="")
                        )
               ),
               tabPanel(appsMenu$menuItem[8],
