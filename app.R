@@ -2,6 +2,8 @@
 library(shiny)
 library(shinydashboard)
 library(shinythemes)
+library(shinyLP)
+library(shinyBS)
 library(splitstackshape)
 library(XML)
 library(stringr)
@@ -10,6 +12,7 @@ library(rgdal)
 library(DBI)
 library(RPostgreSQL)
 library(rpostgis)
+library(DT)
 
 ###*Define Variables####
 source('variables.R')
@@ -31,11 +34,15 @@ server <- function(input, output, session) {
     driver, dbname=pg_db, host=pg_host, port=pg_port, user=pg_user, password=pg_pwd
   )
   
+  getMetadataTbl <- function(){
+    return(dbReadTable(DB, c("public", "metadata")))
+  }
+  
+  listOfTbl <- reactiveValues(metadata=getMetadataTbl())
+  
   ###*DATA Page####
-  metadata <- dbReadTable(DB, c("public", "metadata"))
-
-  output$comp_data <- DT::renderDataTable({
-    DT::datatable(metadata)
+  output$comp_data <- renderDataTable({
+    listOfTbl$metadata
   })
 
   ###*Observe Shapefile Input####
@@ -53,13 +60,12 @@ server <- function(input, output, session) {
       file_shp <- dir(temp_dir, pattern="*.shp$")
       val <- str_remove(basename(file_shp), ".shp")
       
-      full_file_shp <- paste0(temp_dir, val)
+      full_file_shp <- paste0(temp_dir, "/", val, ".shp")
       if(file.exists(full_file_shp)){
-        readShp<-readOGR(dsn = full_file_shp, layer = val)
+        readShp <- readOGR(dsn = full_file_shp, layer = val)
         insertShp <- tryCatch({ pgInsert(DB, val, readShp) }, error=function(e){})
-        print(insertShp)
         if(insertShp){
-          print("Data inserted into database")
+          print("Data has imported into database")
         } else {
           return(NULL)
         }
@@ -596,8 +602,9 @@ server <- function(input, output, session) {
       user_note=input$userNote,
       row.names=NULL
     )
+            
     dbWriteTable(DB, "metadata", tblMetadata, append=TRUE, row.names=FALSE)
-    
+    listOfTbl$metadata <- getMetadataTbl()
   })
   
 }

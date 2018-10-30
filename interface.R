@@ -1,10 +1,26 @@
 navbarPage(title = appsTitle, theme = shinytheme("cerulean"),
+  tabPanel("Home", 
+    jumbotron("SATU DATA", "Mempermudah proses penatagunaan lahan. Menghindari konflik penatagunaan lahan. Mempercepat proses perizinan penatagunaan lahan.", button=FALSE),
+    list_group(div(
+        list_item("Data Input", badge_value = 1),
+        list_item("Compilated Data", badge_value = 0)
+      )
+    ),
+    fluidRow(
+      column(6, panel_div("primary", panel_title="Data Status", "active")),
+      column(6, panel_div("warning", panel_title="Data Reminder", "active"))
+    ),
+    fluidRow(
+      column(6, panel_div("success", panel_title="Last Login", Sys.Date())),
+      column(6, panel_div("info", panel_title="Last Activity", Sys.Date()))
+    )
+  ),
   tabPanel("Data", icon = icon("database"),
-    DT::dataTableOutput("comp_data")
+    dataTableOutput("comp_data")
   ),
   tabPanel("Upload", icon = icon("upload"),
        h2("Upload Data"),
-       fileInput("shpData", "Upload Shapefile", buttonLabel="Browse...", placeholder="No file selected", accept = c('shp', 'SHP', 'ESRI Shapefiles [OGR]', '.shp', '.SHP')),
+       fileInput("shpData", "Upload Shapefile", buttonLabel="Browse...", placeholder="No file selected", accept = c('zip', 'ZIP', 'ZIP (Archive File)', '.zip', '.ZIP')),
        tabBox(title="Metadata",
               id = "tabMetadata", width = "300px",
               tabPanel(appsMenu$menuItem[1],
