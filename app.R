@@ -51,6 +51,9 @@ server <- function(input, output, session) {
   
   ###*DATA Page####
   output$comp_data <- renderDataTable({
+    # metadata <- listOfTbl$metadata
+    # metadata$URL <- paste0("<a href='", "goo.gl","' target='_blank'>", "goo.gl","</a>")
+    # datatable(metadata, escape=FALSE)
     listOfTbl$metadata
   })
 

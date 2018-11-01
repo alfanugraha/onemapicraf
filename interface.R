@@ -1,7 +1,7 @@
 navbarPage(title = appsTitle, theme = shinytheme("cerulean"), id="compilationApps",
   ###Home####
-  tabPanel("Home", value="tabHome",  
-    jumbotron("SATU DATA", "Mempermudah proses penatagunaan lahan. Menghindari konflik penatagunaan lahan. Mempercepat proses perizinan penatagunaan lahan.", button=FALSE),
+  tabPanel("Home", value="tabHome",
+    jumbotron(div(img(src="oki-small.png"), "SATU DATA"), "Mempermudah proses penatagunaan lahan. Menghindari konflik penatagunaan lahan. Mempercepat proses perizinan penatagunaan lahan.", button=FALSE),
     uiOutput("countData"),
     fluidRow(
       column(6, panel_div("primary", panel_title="Data Status", "active")),
