@@ -12,6 +12,7 @@ library(rgdal)
 library(DBI)
 library(RPostgreSQL)
 library(rpostgis)
+library(cleangeo)
 library(DT)
 
 ###*Define Variables####
@@ -30,15 +31,23 @@ server <- function(input, output, session) {
   pg_pwd<-"root"
   
   driver <- dbDriver("PostgreSQL")
-  DB <- dbConnect(
-    driver, dbname=pg_db, host=pg_host, port=pg_port, user=pg_user, password=pg_pwd
-  )
+  DB <- tryCatch({ 
+    dbConnect(driver, dbname=pg_db, host=pg_host, port=pg_port, user=pg_user, password=pg_pwd ) 
+  }, error=function(e){
+    print("Database connection failed")
+    return(FALSE)
+  })
   
-  getMetadataTbl <- function(){
-    return(dbReadTable(DB, c("public", "metadata")))
+  countMetadataTbl <- function(){
+    return(dbGetQuery(DB, "select count(id_metadata) from metadata;"))
   }
   
-  listOfTbl <- reactiveValues(metadata=getMetadataTbl())
+  getMetadataTbl <- function(){
+    # return(dbReadTable(DB, c("public", "metadata")))
+    return(dbGetQuery(DB, "select file_identifier, individual_name, organisation_name from metadata;"))
+  }
+  
+  listOfTbl <- reactiveValues(metadata=getMetadataTbl(), numOfMetadata=countMetadataTbl(), recentMetadata=data.frame(), recentValidityData=data.frame())
   
   ###*DATA Page####
   output$comp_data <- renderDataTable({
@@ -50,9 +59,11 @@ server <- function(input, output, session) {
     inShp <- input$shpData
     inShpType <- inShp$type
     inShpPath <- inShp$datapath
-    print(inShpPath)
-
+    
+    print(paste0("Shapefile location: ", inShpPath))
+    
     if(is.null(inShp)){
+      print("Shapefile.. NULL")
       val <- ""
     } else {
       temp_dir <- dirname(inShpPath)
@@ -62,15 +73,51 @@ server <- function(input, output, session) {
       
       full_file_shp <- paste0(temp_dir, "/", val, ".shp")
       if(file.exists(full_file_shp)){
-        readShp <- readOGR(dsn = full_file_shp, layer = val)
-        insertShp <- tryCatch({ pgInsert(DB, val, readShp) }, error=function(e){})
-        if(insertShp){
-          print("Data has imported into database")
+        shp_file <- readOGR(dsn = full_file_shp, layer = val)
+        
+        print("Topology.. Checking")
+        if(clgeo_IsValid(shp_file)){
+          print("Topology.. OK")
+          # input to postgres
+          # write to xml
+          # print report
         } else {
-          return(NULL)
+          # collect invalid issue
+          report_shp<-clgeo_CollectionReport(shp_file)
+          
+          # reset row numbers of original data
+          shp_data <- shp_file@data
+          row.names(shp_data) <- NULL
+          
+          # select FALSE validity
+          print("Topology.. INVALID")
+          shp_invalid <- report_shp[report_shp$valid==FALSE,]
+          
+          # merge shp_data with report_shp
+          final_report_shp <- merge(shp_data, shp_invalid, by="row.names")
+          listOfTbl$recentValidityData <- final_report_shp
+          
+          # clean topology
+          print("Topology.. CLEANING")
+          showModal(ui=modalDialog("Cleaning topology process. Please wait..", footer = NULL), session=session)
+          running_time <- system.time({
+            shp_file_clean <- clgeo_Clean(shp_file)
+          })
+          removeModal(session)
+          print(running_time)
+          shp_file <- shp_file_clean
+        }        
+        
+        insertShp <- tryCatch({ pgInsert(DB, val, shp_file) }, error=function(e){ return(FALSE) })
+        if(insertShp){
+          print("Shapefile has been imported into database")
+        } else {
+          print("Shapefile.. FAILED TO IMPORT")
+          # return(NULL)
         }
       } else {
-        return(NULL)
+        print("Shapefile doesn't exist")
+        # return(NULL)
       }
       
       val <- paste0(val, "_", format(Sys.time(), "%Y%m%d%H%M%S"))
@@ -493,6 +540,7 @@ server <- function(input, output, session) {
 
     ###*Insert Table Metadata####
     tblMetadata <- data.frame(
+      id_metadata=listOfTbl$numOfMetadata$count+1,
       file_identifier=input$fileIdentifier,
       lang=input$lang,
       character_set=input$charSet,
@@ -604,9 +652,32 @@ server <- function(input, output, session) {
     )
             
     dbWriteTable(DB, "metadata", tblMetadata, append=TRUE, row.names=FALSE)
+    listOfTbl$recentMetadata <- tblMetadata
     listOfTbl$metadata <- getMetadataTbl()
+    listOfTbl$numOfMetadata <- countMetadataTbl()
+    updateTabsetPanel(session, "compilationApps", selected="tabData")
   })
   
+  output$countData <- renderUI({
+    tags$ul(class="list-group",
+      tags$li(class="list-group-item", span(class="badge", listOfTbl$numOfMetadata$count), "Data Input"),
+      tags$li(class="list-group-item", span(class="badge", 0), "Compilated Data")
+    )
+  })
+  
+  output$reportMetadata <- downloadHandler(
+    filename = "metadata.csv",
+    content = function(file) {
+      write.table(t(listOfTbl$recentMetadata), file, quote=FALSE, sep=",")
+    }
+  )
+  
+  output$reportTopology <- downloadHandler(
+    filename = "topology.csv",
+    content = function(file) {
+      write.table(listOfTbl$recentValidityData, file, quote=FALSE, sep=",")
+    }
+  )
 }
 
 ###*Run the application#### 

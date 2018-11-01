@@ -38,6 +38,7 @@ apt-get install uwsgi-pugin-python
 $ sudo apt-get install gdebi-core
 $ wget https://download3.rstudio.org/ubuntu-14.04/x86_64/shiny-server-1.5.7.907-amd64.deb
 $ sudo gdebi shiny-server-1.5.7.907-amd64.deb
+install library to ~/R/x86_64-pc-linux-gnu-library/3.4
 
 
 dpkg -l | grep postgres
