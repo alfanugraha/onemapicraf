@@ -44,15 +44,15 @@ navbarPage(title = appsTitle, theme = shinytheme("cerulean"), id="compilationApp
             textInput(ctEntity$vars[2], ctEntity$name[2], value="", width=NULL, placeholder=""),
             textInput(ctEntity$vars[3], ctEntity$name[3], value="", width=NULL, placeholder=""),
             textInput(ctEntity$vars[4], ctEntity$name[4], value="", width=NULL, placeholder=""),
-            textInput(ctEntity$vars[5], ctEntity$name[5], value="", width=NULL, placeholder=""),
-            textInput(ctEntity$vars[11], ctEntity$name[11], value="", width=NULL, placeholder="")
+            textInput(ctEntity$vars[5], ctEntity$name[5], value="", width=NULL, placeholder="")
           ),
           tabPanel(title = "Location",
             textInput(ctEntity$vars[6], ctEntity$name[6], value="", width=NULL, placeholder=""),
             textInput(ctEntity$vars[7], ctEntity$name[7], value="", width=NULL, placeholder=""),
             textInput(ctEntity$vars[8], ctEntity$name[8], value="", width=NULL, placeholder=""),
             textInput(ctEntity$vars[9], ctEntity$name[9], value="", width=NULL, placeholder=""),
-            textInput(ctEntity$vars[10], ctEntity$name[10], value="", width=NULL, placeholder="")
+            textInput(ctEntity$vars[10], ctEntity$name[10], value="", width=NULL, placeholder=""),
+            textInput(ctEntity$vars[11], ctEntity$name[11], value="", width=NULL, placeholder="")
           ),
           tabPanel(title = "Function",
             textInput(ctEntity$vars[12], ctEntity$name[12], value="", width=NULL, placeholder=""),
@@ -68,10 +68,10 @@ navbarPage(title = appsTitle, theme = shinytheme("cerulean"), id="compilationApp
       tabPanel(appsMenu$menuItem[3],
         tabBox(width = "200px",
           tabPanel(title = "Properties",
-            textInput(sriEntity$vars[3], sriEntity$name[3], value="", width=NULL, placeholder=""),
-            textInput(sriEntity$vars[2], sriEntity$name[2], value="", width=NULL, placeholder=""),
-            textInput(sriEntity$vars[4], sriEntity$name[4], value="", width=NULL, placeholder=""),
             textInput(sriEntity$vars[1], sriEntity$name[1], value="", width=NULL, placeholder=""),
+            textInput(sriEntity$vars[2], sriEntity$name[2], value="", width=NULL, placeholder=""),
+            textInput(sriEntity$vars[3], sriEntity$name[3], value="", width=NULL, placeholder=""),
+            textInput(sriEntity$vars[4], sriEntity$name[4], value="", width=NULL, placeholder=""),
             textInput(sriEntity$vars[5], sriEntity$name[5], value="", width=NULL, placeholder=""),
             textInput(sriEntity$vars[6], sriEntity$name[6], value="", width=NULL, placeholder="")
           ),
@@ -90,18 +90,18 @@ navbarPage(title = appsTitle, theme = shinytheme("cerulean"), id="compilationApp
       tabPanel(appsMenu$menuItem[4],
         tabBox(width = "200px",
           tabPanel(title = "Info",  
-            textInput(refSysEntity$vars[1], refSysEntity$name[1], value="", width=NULL, placeholder=""),
+            textInput(refSysEntity$vars[1], refSysEntity$name[1], value="European Petroleum Survey Group (EPSG) Geodetic Parameter Registry", width=NULL, placeholder=""),
             dateInput(refSysEntity$vars[2], refSysEntity$name[2]),
-            textInput(refSysEntity$vars[3], refSysEntity$name[3], value="", width=NULL, placeholder=""),
-            textInput(refSysEntity$vars[4], refSysEntity$name[4], value="", width=NULL, placeholder=""),
-            textInput(refSysEntity$vars[5], refSysEntity$name[5], value="", width=NULL, placeholder=""),
-            textInput(refSysEntity$vars[6], refSysEntity$name[6], value="", width=NULL, placeholder=""),
-            textInput(refSysEntity$vars[7], refSysEntity$name[7], value="", width=NULL, placeholder=""),
+            textInput(refSysEntity$vars[3], refSysEntity$name[3], value="publication", width=NULL, placeholder=""),
+            textInput(refSysEntity$vars[4], refSysEntity$name[4], value="EPSG", width=NULL, placeholder=""),
+            textInput(refSysEntity$vars[5], refSysEntity$name[5], value="http://www.epsg-registry.org", width=NULL, placeholder=""),
+            textInput(refSysEntity$vars[6], refSysEntity$name[6], value="originator", width=NULL, placeholder=""),
+            textInput(refSysEntity$vars[7], refSysEntity$name[7], value="urn:ogc:def:crs:EPSG:4326", width=NULL, placeholder=""),
             textInput(refSysEntity$vars[8], refSysEntity$name[8], value="", width=NULL, placeholder="")
           ),
           tabPanel(title = "CRS",  
             textInput(refSysEntity$vars[9], refSysEntity$name[9], value="", width=NULL, placeholder=""),
-            textInput(refSysEntity$vars[10], refSysEntity$name[10], value="", width=NULL, placeholder=""),
+            textInput(refSysEntity$vars[10], refSysEntity$name[10], value="+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0", width=NULL, placeholder=""),
             textInput(refSysEntity$vars[11], refSysEntity$name[11], value="", width=NULL, placeholder=""),
             textInput(refSysEntity$vars[12], refSysEntity$name[12], value="", width=NULL, placeholder="")
           )
@@ -124,8 +124,8 @@ navbarPage(title = appsTitle, theme = shinytheme("cerulean"), id="compilationApp
             textInput(idInfoEntity$vars[9], idInfoEntity$name[9], value="", width=NULL, placeholder=""),
             textInput(idInfoEntity$vars[10], idInfoEntity$name[10], value="", width=NULL, placeholder=""),
             textInput(idInfoEntity$vars[11], idInfoEntity$name[11], value="", width=NULL, placeholder=""),
-            textInput(idInfoEntity$vars[12], idInfoEntity$name[12], value="", width=NULL, placeholder=""),
-            textInput(idInfoEntity$vars[13], idInfoEntity$name[13], value="", width=NULL, placeholder="")
+            textInput(idInfoEntity$vars[12], idInfoEntity$name[12], value="utf-8", width=NULL, placeholder=""),
+            textInput(idInfoEntity$vars[13], idInfoEntity$name[13], value="location", width=NULL, placeholder="")
           ),
           tabPanel(title = "Coordinates",         
             textInput(idInfoEntity$vars[14], idInfoEntity$name[14], value="", width=NULL, placeholder=""),
@@ -137,29 +137,30 @@ navbarPage(title = appsTitle, theme = shinytheme("cerulean"), id="compilationApp
       ),
       ###input distribution info####
       tabPanel(appsMenu$menuItem[6],
+        h2("Distributor"),
         tabBox(width = "200px",
           tabPanel(title = "Identity",
             textInput(disInfoEntity$vars[1], disInfoEntity$name[1], value="", width=NULL, placeholder="Fill the name"),
             textInput(disInfoEntity$vars[2], disInfoEntity$name[2], value="", width=NULL, placeholder=""),
             textInput(disInfoEntity$vars[3], disInfoEntity$name[3], value="", width=NULL, placeholder=""),
             textInput(disInfoEntity$vars[4], disInfoEntity$name[4], value="", width=NULL, placeholder=""),
-            textInput(disInfoEntity$vars[5], disInfoEntity$name[5], value="", width=NULL, placeholder=""),
-            textInput(disInfoEntity$vars[11], disInfoEntity$name[11], value="", width=NULL, placeholder="")
+            textInput(disInfoEntity$vars[5], disInfoEntity$name[5], value="", width=NULL, placeholder="")
           ),
           tabPanel(title = "Location",
             textInput(disInfoEntity$vars[6], disInfoEntity$name[6], value="", width=NULL, placeholder=""),
             textInput(disInfoEntity$vars[7], disInfoEntity$name[7], value="", width=NULL, placeholder=""),
             textInput(disInfoEntity$vars[8], disInfoEntity$name[8], value="", width=NULL, placeholder=""),
             textInput(disInfoEntity$vars[9], disInfoEntity$name[9], value="", width=NULL, placeholder=""),
-            textInput(disInfoEntity$vars[10], disInfoEntity$name[10], value="", width=NULL, placeholder="")
+            textInput(disInfoEntity$vars[10], disInfoEntity$name[10], value="", width=NULL, placeholder=""),
+            textInput(disInfoEntity$vars[11], disInfoEntity$name[11], value="", width=NULL, placeholder="")
           ),
           tabPanel(title = "Function",
             textInput(disInfoEntity$vars[12], disInfoEntity$name[12], value="", width=NULL, placeholder=""),
             textInput(disInfoEntity$vars[13], disInfoEntity$name[13], value="", width=NULL, placeholder=""),
-            textInput(disInfoEntity$vars[14], disInfoEntity$name[14], value="", width=NULL, placeholder=""),
-            textInput(disInfoEntity$vars[15], disInfoEntity$name[15], value="", width=NULL, placeholder=""),
-            textInput(disInfoEntity$vars[16], disInfoEntity$name[16], value="", width=NULL, placeholder=""),
-            textInput(disInfoEntity$vars[17], disInfoEntity$name[17], value="", width=NULL, placeholder="")
+            textInput(disInfoEntity$vars[14], disInfoEntity$name[14], value="information", width=NULL, placeholder=""),
+            textInput(disInfoEntity$vars[15], disInfoEntity$name[15], value="Tidak Ada", width=NULL, placeholder=""),
+            textInput(disInfoEntity$vars[16], disInfoEntity$name[16], value="Tidak Ada", width=NULL, placeholder=""),
+            textInput(disInfoEntity$vars[17], disInfoEntity$name[17], value="distributor", width=NULL, placeholder="")
           )
         )
       ),
@@ -198,8 +199,8 @@ navbarPage(title = appsTitle, theme = shinytheme("cerulean"), id="compilationApp
       ),
       ###input metadata maintenance####
       tabPanel(appsMenu$menuItem[8],
-        textInput(mdMtncEntity$vars[1], mdMtncEntity$name[1], value="", width=NULL, placeholder=""),
-        textInput(mdMtncEntity$vars[2], mdMtncEntity$name[2], value="", width=NULL, placeholder="")
+        textInput(mdMtncEntity$vars[1], mdMtncEntity$name[1], value="asNeeded", width=NULL, placeholder=""),
+        textInput(mdMtncEntity$vars[2], mdMtncEntity$name[2], value="Dibuat oleh Alat Bantu Kompilasi", width=NULL, placeholder="")
       ),
       ###input metadata constraints####
       tabPanel(appsMenu$menuItem[9],

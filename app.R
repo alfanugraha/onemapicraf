@@ -30,6 +30,7 @@ server <- function(input, output, session) {
   pg_port<-"5432"
   pg_pwd<-"root"
   
+  # driver <- PostgreSQL(max.con = 100)
   driver <- dbDriver("PostgreSQL")
   DB <- tryCatch({ 
     dbConnect(driver, dbname=pg_db, host=pg_host, port=pg_port, user=pg_user, password=pg_pwd ) 
@@ -67,12 +68,13 @@ server <- function(input, output, session) {
     
     if(is.null(inShp)){
       print("Shapefile.. NULL")
-      val <- ""
+      val <- x_min <- x_max <- y_min <- y_max <- shp_dim <- ""
     } else {
       temp_dir <- dirname(inShpPath)
       unzip(inShpPath, exdir = temp_dir)
       file_shp <- dir(temp_dir, pattern="*.shp$")
       val <- str_remove(basename(file_shp), ".shp")
+      shp_title <- val
       
       full_file_shp <- paste0(temp_dir, "/", val, ".shp")
       if(file.exists(full_file_shp)){
@@ -108,9 +110,29 @@ server <- function(input, output, session) {
           })
           removeModal(session)
           print(running_time)
-          shp_file <- shp_file_clean
+          
+          # check projection
+          print("Projection.. Checking")
+          wgs84_proj <- CRS("+proj=longlat +datum=WGS84")
+          shp_proj <- crs(shp_file_clean) 
+          if(paste0(shp_proj) != paste0(wgs84_proj)){
+            print("Projection.. TRANSFORM")
+            shp_file <- spTransform(shp_file_clean, wgs84_proj)
+          } else {
+            print("Projection.. MATCH!")
+            shp_file <- shp_file_clean
+          }
+          
         }        
         
+        # get boundary box and dimension
+        x_min <- bbox(shp_file)[1]
+        y_min <- bbox(shp_file)[2]
+        x_max <- bbox(shp_file)[3]
+        y_max <- bbox(shp_file)[4]
+        shp_dim <- dim(shp_file)[1]
+        
+        # insert shp to postgresql
         insertShp <- tryCatch({ pgInsert(DB, val, shp_file) }, error=function(e){ return(FALSE) })
         if(insertShp){
           print("Shapefile has been imported into database")
@@ -127,6 +149,14 @@ server <- function(input, output, session) {
     }
 
     updateTextInput(session, inputId=mdEntity$vars[1], value=val)
+    updateTextInput(session, inputId=idInfoEntity$vars[14], value=x_min)
+    updateTextInput(session, inputId=idInfoEntity$vars[15], value=x_max)
+    updateTextInput(session, inputId=idInfoEntity$vars[16], value=y_min)
+    updateTextInput(session, inputId=idInfoEntity$vars[17], value=y_max)
+    updateTextInput(session, inputId=sriEntity$vars[3], value=shp_dim)
+    updateTextInput(session, inputId=sriEntity$vars[4], value=paste0(x_min, ", ", y_max))
+    updateTextInput(session, inputId=idInfoEntity$vars[2], value=shp_title)
+    
   })
   
   ###*Observe Save Button Action####
