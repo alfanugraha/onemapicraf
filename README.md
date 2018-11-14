@@ -46,6 +46,12 @@ $ sudo firewall-cmd --permanent --zone=public --add-port=3838/tcp
 $ sudo firewall-cmd --reload
 ```
 
+### Insert GeoDatabase KUGI Version 4 to PostgreSQL
+Must use GDAL >= 1.11.0
+```
+ogr2ogr -f "PostgreSQL" PG:"host=localhost port=5432 dbname=kugi4 user=postgres password=root" \path-to-kugi\KUGI_Ver4.gdb -lco SCHEMA=public
+```
+
 ### Clone this repository
 ```
 $ cd /srv/shiny-server
@@ -53,8 +59,16 @@ $ sudo mkdir onemap
 $ git clone https://github.com/alfanugraha/onemapicraf.git onemap
 ```
 
+
 ## Deploy Your Application
-Now, point your web browser to http://your-domain-or-ip:3838/onemap, If nothing goes wrong, you will be brought into the One Map Shiny Server in which you can use it as well after install geoportal PALAPA and PostgreSQL Database.
+Now, point your web browser to http://your-domain-or-ip:3838/onemap, If nothing goes wrong, you will be brought into the One Map Shiny Server in which you can use it as well after install geoportal PALAPA and PostgreSQL Database. Some important notes may be delivered for certain server case:  
+
+### Update shiny maximum file request size.
+Open Rprofile.site 
+```
+sudo nano /etc/R/Rprofile.site
+```
+Add the following line
 ```
 options(shiny.maxRequestSize=30*1042^2)
 ```
