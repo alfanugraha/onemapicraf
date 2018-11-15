@@ -4,6 +4,7 @@ library(shinydashboard)
 library(shinythemes)
 library(shinyLP)
 library(shinyBS)
+library(slickR)
 library(splitstackshape)
 library(XML)
 library(stringr)
@@ -17,6 +18,7 @@ library(DT)
 
 ###*Define Variables####
 source('variables.R')
+source('kugi4.R')
 
 ###*Setting Up Interface####
 ui <- source('interface.R')
@@ -26,6 +28,7 @@ server <- function(input, output, session) {
   ###*Connect to PostgreSQL Database####
   pg_user<-"postgres"
   pg_db<-"postgres"
+  # pg_kugi_db<-"kugi4"
   pg_host<-"localhost"
   pg_port<-"5432"
   pg_pwd<-"root"
@@ -39,6 +42,13 @@ server <- function(input, output, session) {
     return(FALSE)
   })
   
+  # Kugi <- tryCatch({ 
+  #   dbConnect(driver, dbname=pg_kugi_db, host=pg_host, port=pg_port, user=pg_user, password=pg_pwd ) 
+  # }, error=function(e){
+  #   print("Database connection failed")
+  #   return(FALSE)
+  # })
+  
   countMetadataTbl <- function(){
     return(dbGetQuery(DB, "select count(id_metadata) from metadata;"))
   }
@@ -50,12 +60,17 @@ server <- function(input, output, session) {
   
   listOfTbl <- reactiveValues(metadata=getMetadataTbl(), numOfMetadata=countMetadataTbl(), recentMetadata=data.frame(), recentValidityData=data.frame())
   
+  output$slideshow <- renderSlickR({
+    images <- list.files("www/slideshow/", pattern=".jpg", full.names=TRUE)
+    slickR(images)
+  })
+  
   ###*DATA Page####
   output$comp_data <- renderDataTable({
     # metadata <- listOfTbl$metadata
     # metadata$URL <- paste0("<a href='", "goo.gl","' target='_blank'>", "goo.gl","</a>")
     # datatable(metadata, escape=FALSE)
-    listOfTbl$metadata
+    datatable(listOfTbl$metadata)
   })
 
   ###*Observe Shapefile Input####
@@ -68,7 +83,7 @@ server <- function(input, output, session) {
     
     if(is.null(inShp)){
       print("Shapefile.. NULL")
-      val <- x_min <- x_max <- y_min <- y_max <- shp_dim <- ""
+      val <- x_min <- x_max <- y_min <- y_max <- shp_dim <- shp_title <- ""
     } else {
       temp_dir <- dirname(inShpPath)
       unzip(inShpPath, exdir = temp_dir)
@@ -157,6 +172,10 @@ server <- function(input, output, session) {
     updateTextInput(session, inputId=sriEntity$vars[4], value=paste0(x_min, ", ", y_max))
     updateTextInput(session, inputId=idInfoEntity$vars[2], value=shp_title)
     
+  })
+  
+  output$listOfKugi <- renderUI({
+    selectInput("kugiName", "Katalog Unsur Geografi Indonesia", choices=sort(as.character(katalogdata[grep(input$shapeGeom, katalogdata$KUGI),])), selectize=FALSE)
   })
   
   ###*Observe Save Button Action####
@@ -711,6 +730,13 @@ server <- function(input, output, session) {
       write.table(listOfTbl$recentValidityData, file, quote=FALSE, sep=",")
     }
   )
+  
+  ###*KUGI Page####
+  # output$kugi_data <- renderDataTable({
+  #   katalog <- data.frame(List=dbListTables(Kugi))
+  #   katalog$List <- sort(katalog$List)
+  #   datatable(katalog)
+  # })
 }
 
 ###*Run the application#### 

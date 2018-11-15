@@ -1,6 +1,8 @@
 navbarPage(title = appsTitle, theme = shinytheme("cerulean"), id="compilationApps",
   ###Home####
   tabPanel("Home", value="tabHome",
+    slickROutput("slideshow", width="100%"),
+    hr(),
     jumbotron(div(img(src="oki-small.png"), "SATU DATA"), "Mempermudah proses penatagunaan lahan. Menghindari konflik penatagunaan lahan. Mempercepat proses perizinan penatagunaan lahan.", button=FALSE),
     uiOutput("countData"),
     fluidRow(
@@ -22,7 +24,9 @@ navbarPage(title = appsTitle, theme = shinytheme("cerulean"), id="compilationApp
       ###input shapefile####
       # "Upload Data",
       tabPanel("Upload Data",
-        fileInput("shpData", "Upload Shapefile", buttonLabel="Browse...", placeholder="No file selected", accept = c('zip', 'ZIP', 'ZIP (Archive File)', '.zip', '.ZIP'))  
+        fileInput("shpData", "Upload Shapefile", buttonLabel="Browse...", placeholder="No file selected", accept = c('zip', 'ZIP', 'ZIP (Archive File)', '.zip', '.ZIP')),
+        selectInput("shapeGeom", "Tipe data vektor", choices=c(`Titik`="Point)", `Garis`="String)", `Poligon`="Polygon)")),
+        uiOutput("listOfKugi")
       ),
       "Input Data",
       ###input metadata####
@@ -221,6 +225,10 @@ navbarPage(title = appsTitle, theme = shinytheme("cerulean"), id="compilationApp
       )
     )
   ),
+  ###KUGI####
+  # tabPanel("KUGI", value="tabData",
+  #   dataTableOutput("kugi_data")
+  # ),
   ###About####
   tabPanel("About"
   )

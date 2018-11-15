@@ -72,3 +72,9 @@ Add the following line
 ```
 options(shiny.maxRequestSize=30*1042^2)
 ```
+
+### Update PostgreSQL maximum locks per transaction
+Open PostgreSQL configuration file: `..\data\postgresql.conf`. Set maximum locks per transcation
+```
+max_locks_per_transaction = 1024 # min 10
+```
