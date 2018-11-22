@@ -28,7 +28,7 @@ server <- function(input, output, session) {
   ###*Connect to PostgreSQL Database####
   pg_user<-"postgres"
   pg_db<-"postgres"
-  # pg_kugi_db<-"kugi4"
+  pg_kugi_db<-"kugi4"
   pg_host<-"localhost"
   pg_port<-"5432"
   pg_pwd<-"root"
@@ -42,12 +42,12 @@ server <- function(input, output, session) {
     return(FALSE)
   })
   
-  # Kugi <- tryCatch({ 
-  #   dbConnect(driver, dbname=pg_kugi_db, host=pg_host, port=pg_port, user=pg_user, password=pg_pwd ) 
-  # }, error=function(e){
-  #   print("Database connection failed")
-  #   return(FALSE)
-  # })
+  Kugi <- tryCatch({
+    dbConnect(driver, dbname=pg_kugi_db, host=pg_host, port=pg_port, user=pg_user, password=pg_pwd )
+  }, error=function(e){
+    print("Database connection failed")
+    return(FALSE)
+  })
   
   countMetadataTbl <- function(){
     return(dbGetQuery(DB, "select count(id_metadata) from metadata;"))
@@ -58,21 +58,32 @@ server <- function(input, output, session) {
     return(dbGetQuery(DB, "select file_identifier, individual_name, organisation_name from metadata;"))
   }
   
-  listOfTbl <- reactiveValues(metadata=getMetadataTbl(), numOfMetadata=countMetadataTbl(), recentMetadata=data.frame(), recentValidityData=data.frame())
+  listOfTbl <- reactiveValues(metadata=getMetadataTbl(), numOfMetadata=countMetadataTbl(), recentMetadata=data.frame(), recentValidityData=data.frame(), tableKugi="")
   
   output$slideshow <- renderSlickR({
-    images <- list.files("www/slideshow/", pattern=".jpg", full.names=TRUE)
+    images <- list.files("www/slideshow/", pattern="j[0-9]", full.names=TRUE)
     slickR(images)
   })
   
   ###*DATA Page####
   output$comp_data <- renderDataTable({
-    # metadata <- listOfTbl$metadata
-    # metadata$URL <- paste0("<a href='", "goo.gl","' target='_blank'>", "goo.gl","</a>")
-    # datatable(metadata, escape=FALSE)
-    datatable(listOfTbl$metadata)
+    metadata <- listOfTbl$metadata
+    # metadata$URL <- paste0('<u>Edit Attribute Data</u>')
+    datatable(metadata, selection="none", class = 'cell-border strip hover', escape=F) %>% formatStyle(1, cursor = 'pointer')
   })
 
+  observeEvent(input$comp_data_cell_clicked, {
+    info <- input$comp_data_cell_clicked
+    # print(info)
+    # do nothing if not clicked yet, or the clicked cell is not in the 1st column
+    # $`row`
+    # $col
+    # $value
+    if (is.null(info$value) || info$col != 1) return()
+    updateTabsetPanel(session, "compilationApps", selected="tabEditKugi")
+    listOfTbl$tableKugi <-  paste0(tolower(unlist(strsplit(info$value, "k_"))[1]), "k")
+  })
+  
   ###*Observe Shapefile Input####
   observe({
     inShp <- input$shpData
@@ -148,16 +159,48 @@ server <- function(input, output, session) {
         shp_dim <- dim(shp_file)[1]
         
         # insert shp to postgresql
-        insertShp <- tryCatch({ pgInsert(DB, val, shp_file) }, error=function(e){ return(FALSE) })
+        tableKugi <- tolower(unlist(strsplit(input$kugiName, " "))[1])
+        insertShp <- tryCatch({ pgInsert(DB, tableKugi, shp_file) }, error=function(e){ return(FALSE) })
         if(insertShp){
           print("Shapefile has been imported into database")
+          
+          # mix and match data with kugi
+          alterTableSQL <- paste0("ALTER TABLE ", tableKugi, " ")
+
+          tableKugiInfo <- dbTableInfo(Kugi, tableKugi)
+          tblkugilen <- nrow(tableKugiInfo)-1
+          
+          for(i in 2:tblkugilen){
+            nullable <- ""
+            if(tableKugiInfo$is_nullable[i] == "NO") nullable <- " NOT NULL DEFAULT '0'" 
+            
+            datatype_length <- ""
+            if(!is.na(tableKugiInfo$character_maximum_length[i])) datatype_length <- paste0("(", tableKugiInfo$character_maximum_length[i], ")")
+            
+            alterTableSQL <- paste0(alterTableSQL,
+                                    "ADD COLUMN ",
+                                    tableKugiInfo$column_name[i], " ",
+                                    tableKugiInfo$data_type[i],
+                                    datatype_length, 
+                                    nullable
+                                  )
+            
+            alterTableSQL <- ifelse(i != tblkugilen, paste0(alterTableSQL, ", "), paste0(alterTableSQL, ";"))
+          }
+          dbSendQuery(DB, alterTableSQL)
+          val <- tableKugi
+          
         } else {
           print("Shapefile.. FAILED TO IMPORT")
-          # return(NULL)
+          showModal(ui=modalDialog("Failed to upload. Please try again..", footer = NULL), session=session)
+          removeModal(session)
+          return()
         }
       } else {
         print("Shapefile doesn't exist")
-        # return(NULL)
+        showModal(ui=modalDialog("Shapefile doesn't exist. Please try again..", footer = NULL), session=session)
+        removeModal(session)        
+        return()
       }
       
       val <- paste0(val, "_", format(Sys.time(), "%Y%m%d%H%M%S"))
@@ -732,11 +775,12 @@ server <- function(input, output, session) {
   )
   
   ###*KUGI Page####
-  # output$kugi_data <- renderDataTable({
-  #   katalog <- data.frame(List=dbListTables(Kugi))
-  #   katalog$List <- sort(katalog$List)
-  #   datatable(katalog)
-  # })
+  output$editAttribute <- renderDataTable({
+    kugiName <- listOfTbl$tableKugi
+    if(kugiName == "") return()
+    spatialKugi <- pgGetGeom(DB, c("public", kugiName))
+    datatable(spatialKugi@data, editable=TRUE, options=list(scrollX = TRUE))
+  })
 }
 
 ###*Run the application#### 

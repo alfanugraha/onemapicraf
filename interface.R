@@ -3,7 +3,7 @@ navbarPage(title = appsTitle, theme = shinytheme("cerulean"), id="compilationApp
   tabPanel("Home", value="tabHome",
     slickROutput("slideshow", width="100%"),
     hr(),
-    jumbotron(div(img(src="oki-small.png"), "SATU DATA"), "Mempermudah proses penatagunaan lahan. Menghindari konflik penatagunaan lahan. Mempercepat proses perizinan penatagunaan lahan.", button=FALSE),
+    jumbotron(div(img(src="jypr-small.png"), "SATU DATA"), "Mempermudah proses penatagunaan lahan. Menghindari konflik penatagunaan lahan. Mempercepat proses perizinan penatagunaan lahan.", button=FALSE),
     uiOutput("countData"),
     fluidRow(
       column(6, panel_div("primary", panel_title="Data Status", "active")),
@@ -14,19 +14,15 @@ navbarPage(title = appsTitle, theme = shinytheme("cerulean"), id="compilationApp
       column(6, panel_div("info", panel_title="Last Activity", Sys.Date()))
     )
   ),
-  ###Data####
-  tabPanel("Data", value="tabData", icon = icon("database"),
-    dataTableOutput("comp_data")
-  ),
   ###Upload####
   tabPanel("Upload", value="tabUpload", icon = icon("upload"),
     navlistPanel(widths = c(2, 10),
       ###input shapefile####
       # "Upload Data",
       tabPanel("Upload Data",
-        fileInput("shpData", "Upload Shapefile", buttonLabel="Browse...", placeholder="No file selected", accept = c('zip', 'ZIP', 'ZIP (Archive File)', '.zip', '.ZIP')),
         selectInput("shapeGeom", "Tipe data vektor", choices=c(`Titik`="Point)", `Garis`="String)", `Poligon`="Polygon)")),
-        uiOutput("listOfKugi")
+        uiOutput("listOfKugi"),
+        fileInput("shpData", "Upload Shapefile", buttonLabel="Browse...", placeholder="No file selected", accept = c('zip', 'ZIP', 'ZIP (Archive File)', '.zip', '.ZIP'))
       ),
       "Input Data",
       ###input metadata####
@@ -225,10 +221,14 @@ navbarPage(title = appsTitle, theme = shinytheme("cerulean"), id="compilationApp
       )
     )
   ),
-  ###KUGI####
-  # tabPanel("KUGI", value="tabData",
-  #   dataTableOutput("kugi_data")
-  # ),
+  ###Data####
+  tabPanel("Data", value="tabData", icon = icon("database"),
+    dataTableOutput("comp_data")
+  ),
+  ###Edit Attribut KUGI####
+  tabPanel("Edit Attribute Table", value="tabEditKugi", 
+    dataTableOutput("editAttribute")
+  ),
   ###About####
   tabPanel("About"
   )
