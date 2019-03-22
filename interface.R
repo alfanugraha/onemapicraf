@@ -3,7 +3,7 @@ navbarPage(title = appsTitle, theme = shinytheme("cerulean"), id="compilationApp
   tabPanel("Home", value="tabHome",
     slickROutput("slideshow", width="100%"),
     hr(),
-    jumbotron(div(img(src="jypr-small.png"), "SATU DATA"), "Mempermudah proses penatagunaan lahan. Menghindari konflik penatagunaan lahan. Mempercepat proses perizinan penatagunaan lahan.", button=FALSE),
+    jumbotron(div(img(src="jypr-small.png"), "SATU PETA"), "Mempermudah proses penatagunaan lahan. Menghindari konflik penatagunaan lahan. Mempercepat proses perizinan penatagunaan lahan.", button=FALSE),
     uiOutput("countData"),
     fluidRow(
       column(6, panel_div("primary", panel_title="Data Status", "active")),
