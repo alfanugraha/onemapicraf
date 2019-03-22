@@ -7,6 +7,10 @@ deb http://apt.postgresql.org/pub/repos/apt/ trusty-pgdg main
 wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
 sudo add-apt-repository ppa:ubuntugis/ubuntugis-unstable
 sudo add-apt-repository -y ppa:ubuntugis/ppa
+
+
+sudo ln -s /usr/lib/libgdal.so /usr/lib/libgdal.so.1
+/sbin/ldconfig
     
   sudo apt-get update
 
