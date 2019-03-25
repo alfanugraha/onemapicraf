@@ -781,6 +781,14 @@ server <- function(input, output, session) {
     spatialKugi <- pgGetGeom(DB, c("public", kugiName))
     datatable(spatialKugi@data, editable=TRUE, options=list(scrollX = TRUE))
   })
+  
+  output$listOfShpColumn <- renderUI({
+    selectInput("shpAttrib", "Kolom atribut data original", choices=sort(as.character(katalogdata[grep(input$shapeGeom, katalogdata$KUGI),])), selectize=FALSE)
+  })
+  
+  output$listOfKugiAttrib <- renderUI({
+    selectInput("kugiAttrib", "Kolom atribut KUGI", choices=sort(as.character(katalogdata[grep(input$shapeGeom, katalogdata$KUGI),])), selectize=FALSE)
+  })
 }
 
 ###*Run the application#### 

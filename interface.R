@@ -227,7 +227,13 @@ navbarPage(title = appsTitle, theme = shinytheme("cerulean"), id="compilationApp
   ),
   ###Edit Attribut KUGI####
   tabPanel("Edit Attribute Table", value="tabEditKugi", 
-    dataTableOutput("editAttribute")
+    dataTableOutput("editAttribute"),
+    hr(),
+    "Padu padan kolom atribut",
+    uiOutput("listOfShpColumn"),
+    uiOutput("listOfKugiAttrib"),
+    actionButton("matchButton", "Match"),
+    actionButton("finishMatchButton", "Finish")
   ),
   ###About####
   tabPanel("About"
