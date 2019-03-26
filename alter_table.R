@@ -1,6 +1,7 @@
 pg_user<-"postgres"
 pg_db<-"postgres"
 pg_kugi_db<-"kugi4"
+pg_igd_db<-"IGD"
 pg_host<-"localhost"
 pg_port<-"5432"
 pg_pwd<-"root"
@@ -21,6 +22,12 @@ Kugi <- tryCatch({
   return(FALSE)
 })
 
+Igd <- tryCatch({
+  dbConnect(driver, dbname=pg_igd_db, host=pg_host, port=pg_port, user=pg_user, password=pg_pwd )
+}, error=function(e){
+  print("Database connection failed")
+  return(FALSE)
+})
 
 # get shapefile
 toponimi_pt_50k <- pgGetGeom(DB, c("public", "toponimi_pt_50k"))

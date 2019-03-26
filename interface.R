@@ -228,7 +228,7 @@ navbarPage(title = appsTitle, theme = shinytheme("cerulean"), id="compilationApp
       dataTableOutput("comp_data")
     ),
     ###Edit Attribut KUGI####
-    tabPanel("Edit Attribute Table", value="tabEditKugi", 
+    tabPanel("Edit Attribute Table", value="tabEditKugi", icon = icon("edit"), 
       dataTableOutput("editAttribute"),
       hr(),
       "Padu padan kolom atribut",
@@ -240,7 +240,11 @@ navbarPage(title = appsTitle, theme = shinytheme("cerulean"), id="compilationApp
   ),
   ###Integration####
   navbarMenu("Integrasi",
-    tabPanel("Select Data"),
+    tabPanel("Select Data", values="tabSelectIgd", 
+      uiOutput("listOfCompData"),
+      uiOutput("listOfIgdData"),
+      actionButton("unionButton", "Union")
+    ),
     "----",
     "Viewer",
     tabPanel("Map Viewer")

@@ -10,6 +10,7 @@ library(XML)
 library(stringr)
 library(raster)
 library(rgdal)
+library(rgeos)
 library(DBI)
 library(RPostgreSQL)
 library(rpostgis)
@@ -27,8 +28,9 @@ ui <- source('interface.R')
 server <- function(input, output, session) {
   ###*Connect to PostgreSQL Database####
   pg_user<-"postgres"
-  pg_db<-"postgres"
+  pg_db<-"compilation"
   pg_kugi_db<-"kugi4"
+  pg_igd_db<-"IGD"
   pg_host<-"localhost"
   pg_port<-"5432"
   pg_pwd<-"root"
@@ -44,6 +46,13 @@ server <- function(input, output, session) {
   
   Kugi <- tryCatch({
     dbConnect(driver, dbname=pg_kugi_db, host=pg_host, port=pg_port, user=pg_user, password=pg_pwd )
+  }, error=function(e){
+    print("Database connection failed")
+    return(FALSE)
+  })
+  
+  Igd <- tryCatch({
+    dbConnect(driver, dbname=pg_igd_db, host=pg_host, port=pg_port, user=pg_user, password=pg_pwd )
   }, error=function(e){
     print("Database connection failed")
     return(FALSE)
@@ -825,6 +834,24 @@ server <- function(input, output, session) {
     
     # alter table
     
+  })
+  
+  ###*SELECT DATA Page####
+  output$listOfCompData <- renderUI({
+    allListComp <- dbListTables(DB)
+    allListComp <- allListComp[!allListComp %in% c("layer", "topology", "spatial_ref_sys")]
+    selectInput("selectedCompData", "Pilih Kompilasi Data", choices=allListComp, selectize=FALSE)
+  })
+  
+  output$listOfIgdData <- renderUI({
+    allListIgd <- dbListTables(Igd)
+    allListIgd <- allListIgd[!allListIgd %in% c("layer", "topology", "spatial_ref_sys")]
+    selectInput("selectedIgdData", "Pilih IGD Data", choices=allListIgd, selectize=FALSE)
+  })
+  
+  observeEvent(input$unionButton, {
+    print(input$selectedCompData)
+    print(input$selectedIgdData)
   })
   
 }
