@@ -77,7 +77,8 @@ server <- function(input, output, session) {
                               tableKugi="",
                               recentTableWithKugi=data.frame(),
                               recentAttributeTable=NULL,
-                              recentAttributeKugi=NULL)
+                              recentAttributeKugi=NULL,
+                              listMatch=data.frame())
   
   output$slideshow <- renderSlickR({
     images <- list.files("www/slideshow/", pattern="j[0-9]", full.names=TRUE)
@@ -824,6 +825,10 @@ server <- function(input, output, session) {
   })
   
   ###*KUGI Page####
+  output$rawTitle <- renderText({
+    paste0("Selected data: ", listOfTbl$tableKugi)
+  })
+  
   output$editAttribute <- renderDataTable({
     # recentTableWithKugi <- listOfTbl$recentTableWithKugi
     datatable(listOfTbl$recentTableWithKugi, editable=TRUE, options=list(scrollX = TRUE))
@@ -840,28 +845,121 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$matchButton, {
+    kugiAttrib <- input$kugiAttrib
+    shpAttrib <- input$shpAttrib
+    
     # move value to kugi field from old field
-    eval(parse(text=paste0("listOfTbl$recentTableWithKugi$", input$kugiAttrib, " <- listOfTbl$recentTableWithKugi$", input$shpAttrib)))
+    eval(parse(text=paste0("listOfTbl$recentTableWithKugi$", kugiAttrib, " <- listOfTbl$recentTableWithKugi$", shpAttrib)))
 
     # remove old field
-    eval(parse(text=paste0("listOfTbl$recentTableWithKugi$", input$shpAttrib, " <- NULL")))
+    eval(parse(text=paste0("listOfTbl$recentTableWithKugi$", shpAttrib, " <- NULL")))
     
     # remove value from list of char
-    listOfTbl$recentAttributeTable <- listOfTbl$recentAttributeTable[listOfTbl$recentAttributeTable!=input$shpAttrib]
+    listOfTbl$recentAttributeTable <- listOfTbl$recentAttributeTable[listOfTbl$recentAttributeTable != shpAttrib]
     
-    # alter table
+    # list all of updated match and removed match 
+    listMatch <- data.frame(kugi=kugiAttrib, shp=shpAttrib)
+    listOfTbl$listMatch <- rbind(listOfTbl$listMatch, listMatch)
+  })
+  
+  observeEvent(input$finishMatchButton, {
+    # update & alter table
+    # - update attr
+    #   send query: update toponimi_pt_50k set alias = "TOPONIMI"; 
+    # - kumpulin list yg di remove
+    #   send query: alter table toponimi_pt_50k drop column "TOPONIMI"
+    # - insert data to compilated data
+    # - drop data from rawdata
     
+    tableName <- listOfTbl$tableKugi
+    listMatch <- listOfTbl$listMatch
+    print(listMatch)
+    
+    data_len <- nrow(listMatch)
+  
+    raw <- connectDB(pg_raw_db)
+    for(i in 1:data_len){
+      
+      # updateTableQuery <- paste0("UPDATE ", tableName, " SET ", listMatch$kugi[i], " = \"", listMatch$shp[i], "\"")
+      # print(updateTableQuery)
+      # dbSendQuery(raw, updateTableQuery)
+      # 
+      # alterTableQuery <- paste0("ALTER TABLE ", tableName, " DROP COLUMN ", listMatch$shp[i])
+      # print(alterTableQuery)
+      # dbSendQuery(raw, alterTableQuery)
+      
+      # update column
+      updateTableQuery <- paste0("UPDATE ", tableName, " SET ", listMatch$kugi[i], " = \"", listMatch$shp[i], "\";")
+      tryUpdate <- tryCatch({
+        dbSendQuery(raw, updateTableQuery)
+      }, error=function(e){
+        message(e)
+        return(FALSE)
+      })
+      if(is.logical(tryUpdate)){
+        updateTableQuery <- paste0("UPDATE ", tableName, " SET ", listMatch$kugi[i], " = ", listMatch$shp[i], ";")
+        dbSendQuery(raw, updateTableQuery)
+        print("Update with command 2..")
+      } else {
+        print("Update successful..")
+      }
+      print(updateTableQuery)
+      
+      # alter table drop column
+      alterTableQuery <- paste0("ALTER TABLE ", tableName, " DROP COLUMN \"", listMatch$shp[i], "\";")
+      tryAlter <- tryCatch({
+        dbSendQuery(raw, alterTableQuery)
+      }, error=function(e){
+        message(e)
+        return(FALSE)
+      })
+      if(is.logical(tryAlter)){
+        alterTableQuery <- paste0("ALTER TABLE ", tableName, " DROP COLUMN ", listMatch$shp[i], ";")
+        dbSendQuery(raw, alterTableQuery)
+        print("Alter with command 2..")
+      } else {
+        print("Alter successful..")
+      }
+      print(alterTableQuery)
+    }  
+    
+    compilatedData <- pgGetGeom(raw, c("public", tableName))
+    disconnectDB(raw)
+    
+    compdb <- connectDB(pg_comp_db)
+    importToComp <- tryCatch({ pgInsert(compdb, tableName, compilatedData) }, error=function(e){ return(FALSE) })
+    if(importToComp){
+      print("Shapefile has been imported successfully")
+      showModal(ui=modalDialog("Data has been compilated", footer = NULL), session=session)
+      removeModal(session)
+    } else {
+      print("Shapefile.. FAILED TO IMPORT")
+      showModal(ui=modalDialog("Failed to upload. Please try again..", footer = NULL), session=session)
+      removeModal(session)
+    }
+    disconnectDB(compdb)
+    
+    listOfTbl$listMatch <- data.frame()
+    listOfTbl$recentAttributeTable <- NULL
+    listOfTbl$recentAttributeKugi <- NULL
+    
+    removeUI( selector = "div:has(> #rawTitle)" )
+    removeUI( selector = "div:has(> #editAttribute)" )
   })
   
   ###*SELECT DATA Page####
   output$listOfCompData <- renderUI({
-    allListComp <- dbListTables(DB)
+    compdb <- connectDB(pg_comp_db)
+    allListComp <- dbListTables(compdb)
+    disconnectDB(compdb)
     allListComp <- allListComp[!allListComp %in% c("layer", "topology", "spatial_ref_sys")]
     selectInput("selectedCompData", "Pilih Kompilasi Data", choices=allListComp, selectize=FALSE)
   })
   
   output$listOfIgdData <- renderUI({
-    allListIgd <- dbListTables(Igd)
+    igddb <- connectDB(pg_igd_db)
+    allListIgd <- dbListTables(igddb)
+    disconnectDB(igddb)
     allListIgd <- allListIgd[!allListIgd %in% c("layer", "topology", "spatial_ref_sys")]
     selectInput("selectedIgdData", "Pilih IGD Data", choices=allListIgd, selectize=FALSE)
   })

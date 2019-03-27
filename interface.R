@@ -228,7 +228,9 @@ navbarPage(title = appsTitle, theme = shinytheme("cerulean"), id="compilationApp
       dataTableOutput("comp_data")
     ),
     ###Edit Attribut KUGI####
-    tabPanel("Edit Attribute Table", value="tabEditKugi", icon = icon("edit"), 
+    tabPanel("Edit Attribute Table", value="tabEditKugi", icon = icon("edit"),
+      h1(textOutput("rawTitle")),
+      hr(),
       dataTableOutput("editAttribute"),
       hr(),
       "Padu padan kolom atribut",
