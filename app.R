@@ -27,44 +27,47 @@ ui <- source('interface.R')
 ###*Preparing Server#### 
 server <- function(input, output, session) {
   ###*Connect to PostgreSQL Database####
+  # driver <- PostgreSQL(max.con = 100)
+  driver <- dbDriver("PostgreSQL")
+  
   pg_user<-"postgres"
-  pg_db<-"compilation"
-  pg_kugi_db<-"kugi4"
-  pg_igd_db<-"IGD"
   pg_host<-"localhost"
   pg_port<-"5432"
   pg_pwd<-"root"
   
-  # driver <- PostgreSQL(max.con = 100)
-  driver <- dbDriver("PostgreSQL")
-  DB <- tryCatch({ 
-    dbConnect(driver, dbname=pg_db, host=pg_host, port=pg_port, user=pg_user, password=pg_pwd ) 
-  }, error=function(e){
-    print("Database connection failed")
-    return(FALSE)
-  })
+  pg_raw_db<-"rawdata"
+  pg_md_db<-"metadata"
+  pg_kugi_db<-"kugi"
+  pg_comp_db<-"compilation"
+  pg_igd_db<-"IGD"
+  pg_int_db<-"integration"
+  pg_sync_db<-"sync"
+  pg_onemap_db<-"onemap"
   
-  Kugi <- tryCatch({
-    dbConnect(driver, dbname=pg_kugi_db, host=pg_host, port=pg_port, user=pg_user, password=pg_pwd )
-  }, error=function(e){
-    print("Database connection failed")
-    return(FALSE)
-  })
+  connectDB <- function(pg_db){
+    tryCatch({
+      dbConnect(driver, dbname=pg_db, host=pg_host, port=pg_port, user=pg_user, password=pg_pwd )
+    }, error=function(e){
+      print("Database connection failed")
+      return(FALSE)
+    })
+  }
   
-  Igd <- tryCatch({
-    dbConnect(driver, dbname=pg_igd_db, host=pg_host, port=pg_port, user=pg_user, password=pg_pwd )
-  }, error=function(e){
-    print("Database connection failed")
-    return(FALSE)
-  })
+  disconnectDB <- function(pg_db){
+    dbDisconnect(pg_db)
+  }
   
   countMetadataTbl <- function(){
-    return(dbGetQuery(DB, "select count(id_metadata) from metadata;"))
+    metadata<-connectDB(pg_md_db)
+    return(dbGetQuery(metadata, "select count(id_metadata) from metadata;"))
+    disconnectDB(metadata)
   }
   
   getMetadataTbl <- function(){
     # return(dbReadTable(DB, c("public", "metadata")))
-    return(dbGetQuery(DB, "select file_identifier, individual_name, organisation_name from metadata;"))
+    metadata<-connectDB(pg_md_db)
+    return(dbGetQuery(metadata, "select file_identifier, individual_name, organisation_name from metadata;"))
+    disconnectDB(metadata)
   }
   
   listOfTbl <- reactiveValues(metadata=getMetadataTbl(),
@@ -94,37 +97,6 @@ server <- function(input, output, session) {
   
   output$listOfTopicCategory <- renderUI({
     selectInput(inputId=as.character(idInfoEntity$vars[13]), label=as.character(idInfoEntity$name[13]), choices=topiccategory$category, selectize=FALSE)
-  })
-  
-  ###*DATA Page####
-  output$comp_data <- renderDataTable({
-    metadata <- listOfTbl$metadata
-    # metadata$URL <- paste0('<u>Edit Attribute Data</u>')
-    datatable(metadata, selection="none", class = 'cell-border strip hover', escape=F) %>% formatStyle(1, cursor = 'pointer')
-  })
-
-  observeEvent(input$comp_data_cell_clicked, {
-    info <- input$comp_data_cell_clicked
-    # print(info)
-    # do nothing if not clicked yet, or the clicked cell is not in the 1st column
-    # $`row`
-    # $col
-    # $value
-    if (is.null(info$value) || info$col != 1) return()
-    updateTabsetPanel(session, "compilationApps", selected="tabEditKugi")
-    listOfTbl$tableKugi <-  paste0(tolower(unlist(strsplit(info$value, "k_"))[1]), "k")
-    
-    kugiName <- listOfTbl$tableKugi
-    if(kugiName == "") return()
-    # else 
-    spatialKugi <- pgGetGeom(DB, c("public", kugiName))
-    listOfTbl$recentTableWithKugi <- spatialKugi@data
-    
-    spatialKugiInfo <- dbTableInfo(DB, c("public", kugiName))
-    listOfTbl$recentAttributeTable <- spatialKugiInfo$column_name
-    
-    kugiInfo <- dbTableInfo(Kugi, c("public", kugiName))
-    listOfTbl$recentAttributeKugi <- kugiInfo$column_name
   })
   
   ###*Observe Shapefile Input####
@@ -202,15 +174,18 @@ server <- function(input, output, session) {
         shp_dim <- dim(shp_file)[1]
         
         # insert shp to postgresql
+        rawdata<-connectDB(pg_raw_db)
+        kugi<-connectDB(pg_kugi_db)
+        
         tableKugi <- tolower(unlist(strsplit(input$kugiName, " "))[1])
-        insertShp <- tryCatch({ pgInsert(DB, tableKugi, shp_file) }, error=function(e){ return(FALSE) })
+        insertShp <- tryCatch({ pgInsert(rawdata, tableKugi, shp_file) }, error=function(e){ return(FALSE) })
         if(insertShp){
           print("Shapefile has been imported into database")
           
           # mix and match data with kugi
           alterTableSQL <- paste0("ALTER TABLE ", tableKugi, " ")
 
-          tableKugiInfo <- dbTableInfo(Kugi, tableKugi)
+          tableKugiInfo <- dbTableInfo(kugi, tableKugi)
           tblkugilen <- nrow(tableKugiInfo)-1
           
           for(i in 2:tblkugilen){
@@ -230,9 +205,11 @@ server <- function(input, output, session) {
             
             alterTableSQL <- ifelse(i != tblkugilen, paste0(alterTableSQL, ", "), paste0(alterTableSQL, ";"))
           }
-          dbSendQuery(DB, alterTableSQL)
+          dbSendQuery(rawdata, alterTableSQL)
           val <- tableKugi
           
+          disconnectDB(rawdata)
+          disconnectDB(kugi)
         } else {
           print("Shapefile.. FAILED TO IMPORT")
           showModal(ui=modalDialog("Failed to upload. Please try again..", footer = NULL), session=session)
@@ -784,11 +761,13 @@ server <- function(input, output, session) {
       user_note=input$userNote,
       row.names=NULL
     )
-            
-    dbWriteTable(DB, "metadata", tblMetadata, append=TRUE, row.names=FALSE)
+           
+    md<-connectDB(pg_md_db)             
+    dbWriteTable(md, "metadata", tblMetadata, append=TRUE, row.names=FALSE)
     listOfTbl$recentMetadata <- tblMetadata
     listOfTbl$metadata <- getMetadataTbl()
     listOfTbl$numOfMetadata <- countMetadataTbl()
+    disconnectDB(md)
     updateTabsetPanel(session, "compilationApps", selected="tabData")
   })
   
@@ -805,6 +784,44 @@ server <- function(input, output, session) {
       write.table(listOfTbl$recentValidityData, file, quote=FALSE, sep=",")
     }
   )
+  
+  ###*DATA Page####
+  output$comp_data <- renderDataTable({
+    metadata <- listOfTbl$metadata
+    # metadata$URL <- paste0('<u>Edit Attribute Data</u>')
+    datatable(metadata, selection="none", class = 'cell-border strip hover', escape=F) %>% formatStyle(1, cursor = 'pointer')
+  })
+
+  observeEvent(input$comp_data_cell_clicked, {
+    info <- input$comp_data_cell_clicked
+    # print(info)
+    # do nothing if not clicked yet, or the clicked cell is not in the 1st column
+    # $`row`
+    # $col
+    # $value
+    if (is.null(info$value) || info$col != 1) return()
+    updateTabsetPanel(session, "compilationApps", selected="tabEditKugi")
+    listOfTbl$tableKugi <-  paste0(tolower(unlist(strsplit(info$value, "k_"))[1]), "k")
+    
+    kugiName <- listOfTbl$tableKugi
+    if(kugiName == "") return()
+    
+    # else 
+    rawdata<-connectDB(pg_raw_db)
+    kugi<-connectDB(pg_kugi_db)
+    
+    spatialKugi <- pgGetGeom(rawdata, c("public", kugiName))
+    listOfTbl$recentTableWithKugi <- spatialKugi@data
+    
+    spatialKugiInfo <- dbTableInfo(rawdata, c("public", kugiName))
+    listOfTbl$recentAttributeTable <- spatialKugiInfo$column_name
+    
+    kugiInfo <- dbTableInfo(kugi, c("public", kugiName))
+    listOfTbl$recentAttributeKugi <- kugiInfo$column_name
+    
+    disconnectDB(rawdata)
+    disconnectDB(kugi)
+  })
   
   ###*KUGI Page####
   output$editAttribute <- renderDataTable({
