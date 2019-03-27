@@ -10,6 +10,7 @@ library(XML)
 library(stringr)
 library(raster)
 library(rgdal)
+library(rgeos)
 library(DBI)
 library(RPostgreSQL)
 library(rpostgis)
@@ -27,8 +28,9 @@ ui <- source('interface.R')
 server <- function(input, output, session) {
   ###*Connect to PostgreSQL Database####
   pg_user<-"postgres"
-  pg_db<-"postgres"
+  pg_db<-"compilation"
   pg_kugi_db<-"kugi4"
+  pg_igd_db<-"IGD"
   pg_host<-"localhost"
   pg_port<-"5432"
   pg_pwd<-"root"
@@ -49,6 +51,13 @@ server <- function(input, output, session) {
     return(FALSE)
   })
   
+  Igd <- tryCatch({
+    dbConnect(driver, dbname=pg_igd_db, host=pg_host, port=pg_port, user=pg_user, password=pg_pwd )
+  }, error=function(e){
+    print("Database connection failed")
+    return(FALSE)
+  })
+  
   countMetadataTbl <- function(){
     return(dbGetQuery(DB, "select count(id_metadata) from metadata;"))
   }
@@ -58,11 +67,33 @@ server <- function(input, output, session) {
     return(dbGetQuery(DB, "select file_identifier, individual_name, organisation_name from metadata;"))
   }
   
-  listOfTbl <- reactiveValues(metadata=getMetadataTbl(), numOfMetadata=countMetadataTbl(), recentMetadata=data.frame(), recentValidityData=data.frame(), tableKugi="")
+  listOfTbl <- reactiveValues(metadata=getMetadataTbl(),
+                              numOfMetadata=countMetadataTbl(),
+                              recentMetadata=data.frame(),
+                              recentValidityData=data.frame(),
+                              tableKugi="",
+                              recentTableWithKugi=data.frame(),
+                              recentAttributeTable=NULL,
+                              recentAttributeKugi=NULL)
   
   output$slideshow <- renderSlickR({
     images <- list.files("www/slideshow/", pattern="j[0-9]", full.names=TRUE)
     slickR(images)
+  })
+  
+  output$countData <- renderUI({
+    tags$ul(class="list-group",
+      tags$li(class="list-group-item", span(class="badge", listOfTbl$numOfMetadata$count), "Data Input"),
+      tags$li(class="list-group-item", span(class="badge", 0), "Compilated Data")
+    )
+  })
+  
+  output$listOfKugi <- renderUI({
+    selectInput("kugiName", "Katalog Unsur Geografi Indonesia", choices=sort(as.character(katalogdata[grep(input$shapeGeom, katalogdata$KUGI),])), selectize=FALSE)
+  })
+  
+  output$listOfTopicCategory <- renderUI({
+    selectInput(inputId=as.character(idInfoEntity$vars[13]), label=as.character(idInfoEntity$name[13]), choices=topiccategory$category, selectize=FALSE)
   })
   
   ###*DATA Page####
@@ -82,6 +113,18 @@ server <- function(input, output, session) {
     if (is.null(info$value) || info$col != 1) return()
     updateTabsetPanel(session, "compilationApps", selected="tabEditKugi")
     listOfTbl$tableKugi <-  paste0(tolower(unlist(strsplit(info$value, "k_"))[1]), "k")
+    
+    kugiName <- listOfTbl$tableKugi
+    if(kugiName == "") return()
+    # else 
+    spatialKugi <- pgGetGeom(DB, c("public", kugiName))
+    listOfTbl$recentTableWithKugi <- spatialKugi@data
+    
+    spatialKugiInfo <- dbTableInfo(DB, c("public", kugiName))
+    listOfTbl$recentAttributeTable <- spatialKugiInfo$column_name
+    
+    kugiInfo <- dbTableInfo(Kugi, c("public", kugiName))
+    listOfTbl$recentAttributeKugi <- kugiInfo$column_name
   })
   
   ###*Observe Shapefile Input####
@@ -215,10 +258,6 @@ server <- function(input, output, session) {
     updateTextInput(session, inputId=sriEntity$vars[4], value=paste0(x_min, ", ", y_max))
     updateTextInput(session, inputId=idInfoEntity$vars[2], value=shp_title)
     
-  })
-  
-  output$listOfKugi <- renderUI({
-    selectInput("kugiName", "Katalog Unsur Geografi Indonesia", choices=sort(as.character(katalogdata[grep(input$shapeGeom, katalogdata$KUGI),])), selectize=FALSE)
   })
   
   ###*Observe Save Button Action####
@@ -753,13 +792,6 @@ server <- function(input, output, session) {
     updateTabsetPanel(session, "compilationApps", selected="tabData")
   })
   
-  output$countData <- renderUI({
-    tags$ul(class="list-group",
-      tags$li(class="list-group-item", span(class="badge", listOfTbl$numOfMetadata$count), "Data Input"),
-      tags$li(class="list-group-item", span(class="badge", 0), "Compilated Data")
-    )
-  })
-  
   output$reportMetadata <- downloadHandler(
     filename = "metadata.csv",
     content = function(file) {
@@ -776,11 +808,52 @@ server <- function(input, output, session) {
   
   ###*KUGI Page####
   output$editAttribute <- renderDataTable({
-    kugiName <- listOfTbl$tableKugi
-    if(kugiName == "") return()
-    spatialKugi <- pgGetGeom(DB, c("public", kugiName))
-    datatable(spatialKugi@data, editable=TRUE, options=list(scrollX = TRUE))
+    # recentTableWithKugi <- listOfTbl$recentTableWithKugi
+    datatable(listOfTbl$recentTableWithKugi, editable=TRUE, options=list(scrollX = TRUE))
   })
+  
+  output$listOfShpColumn <- renderUI({
+    # recentAttributeTable <- listOfTbl$recentAttributeTable 
+    selectInput("shpAttrib", "Kolom atribut data original", choices=listOfTbl$recentAttributeTable, selectize=FALSE)
+  })
+  
+  output$listOfKugiAttrib <- renderUI({
+    # recentAttributeKugi <- listOfTbl$recentAttributeKugi 
+    selectInput("kugiAttrib", "Kolom atribut KUGI", choices=listOfTbl$recentAttributeKugi, selectize=FALSE)
+  })
+  
+  observeEvent(input$matchButton, {
+    # move value to kugi field from old field
+    eval(parse(text=paste0("listOfTbl$recentTableWithKugi$", input$kugiAttrib, " <- listOfTbl$recentTableWithKugi$", input$shpAttrib)))
+
+    # remove old field
+    eval(parse(text=paste0("listOfTbl$recentTableWithKugi$", input$shpAttrib, " <- NULL")))
+    
+    # remove value from list of char
+    listOfTbl$recentAttributeTable <- listOfTbl$recentAttributeTable[listOfTbl$recentAttributeTable!=input$shpAttrib]
+    
+    # alter table
+    
+  })
+  
+  ###*SELECT DATA Page####
+  output$listOfCompData <- renderUI({
+    allListComp <- dbListTables(DB)
+    allListComp <- allListComp[!allListComp %in% c("layer", "topology", "spatial_ref_sys")]
+    selectInput("selectedCompData", "Pilih Kompilasi Data", choices=allListComp, selectize=FALSE)
+  })
+  
+  output$listOfIgdData <- renderUI({
+    allListIgd <- dbListTables(Igd)
+    allListIgd <- allListIgd[!allListIgd %in% c("layer", "topology", "spatial_ref_sys")]
+    selectInput("selectedIgdData", "Pilih IGD Data", choices=allListIgd, selectize=FALSE)
+  })
+  
+  observeEvent(input$unionButton, {
+    print(input$selectedCompData)
+    print(input$selectedIgdData)
+  })
+  
 }
 
 ###*Run the application#### 
