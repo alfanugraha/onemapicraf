@@ -119,3 +119,4 @@ WITH (
 );
 ALTER TABLE public.metadata
   OWNER TO postgres;
+  
