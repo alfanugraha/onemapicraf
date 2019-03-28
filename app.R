@@ -17,6 +17,8 @@ library(rpostgis)
 library(cleangeo)
 library(DT)
 
+library(leaflet)
+
 ###*Define Variables####
 source('variables.R')
 source('kugi4.R')
@@ -967,6 +969,25 @@ server <- function(input, output, session) {
   observeEvent(input$unionButton, {
     print(input$selectedCompData)
     print(input$selectedIgdData)
+  })
+  
+  output$map <- renderLeaflet({
+    selectedCompData <- input$selectedCompData
+    print(selectedCompData)
+    selectedIgdData <- input$selectedIgdData
+    
+    compdb <- connectDB(pg_comp_db)
+    compData <- pgGetGeom(compdb, c("public", selectedCompData))
+    
+    print("render map")
+    leaflet() %>% 
+      addPolygons(data=compData, weight=5, col = 'red') %>% 
+      addProviderTiles("Esri.OceanBasemap", group = "Esri.OceanBasemap") %>%
+      addProviderTiles("CartoDB.DarkMatter", group = "DarkMatter (CartoDB)") %>%
+      addProviderTiles("OpenStreetMap.Mapnik", group = "OpenStreetmap") %>%
+      addProviderTiles("Esri.WorldImagery", group = "Esri.WorldImagery") %>%
+      addLayersControl(baseGroups = c("OpenStreetmap","Esri.OceanBasemap",'DarkMatter (CartoDB)', 'Esri.WorldImagery'),
+                       options = layersControlOptions(collapsed = TRUE, autoZIndex = F))
   })
   
 }

@@ -243,13 +243,18 @@ navbarPage(title = appsTitle, theme = shinytheme("cerulean"), id="compilationApp
   ###Integration####
   navbarMenu("Integrasi",
     tabPanel("Select Data", values="tabSelectIgd", 
-      uiOutput("listOfCompData"),
-      uiOutput("listOfIgdData"),
-      actionButton("unionButton", "Union")
-    ),
-    "----",
-    "Viewer",
-    tabPanel("Map Viewer")
+      box(width = 6,status = 'warning',
+        uiOutput("listOfCompData"),
+        uiOutput("listOfIgdData"),
+        actionButton("unionButton", "Union")
+      ),
+      box(width = 6,status = 'warning',
+        leafletOutput("map",height = 650)
+      )
+    )
+    # "----",
+    # "Viewer",
+    # tabPanel("Map Viewer")
   ),
   ###Synchronization####
   # navbarMenu("Sinkronisasi",
