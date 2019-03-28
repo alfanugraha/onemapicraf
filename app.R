@@ -966,28 +966,57 @@ server <- function(input, output, session) {
     selectInput("selectedIgdData", "Pilih IGD Data", choices=allListIgd, selectize=FALSE)
   })
   
-  observeEvent(input$unionButton, {
-    print(input$selectedCompData)
-    print(input$selectedIgdData)
-  })
-  
   output$map <- renderLeaflet({
     selectedCompData <- input$selectedCompData
     print(selectedCompData)
     selectedIgdData <- input$selectedIgdData
+    print(selectedIgdData)
     
     compdb <- connectDB(pg_comp_db)
     compData <- pgGetGeom(compdb, c("public", selectedCompData))
+    compData <- spTransform(compData, CRS("+proj=longlat +datum=WGS84 +no_defs"))
+    igddb <- connectDB(pg_igd_db)
+    igdData <- pgGetGeom(igddb, c("public", selectedIgdData))
+    igdData <- spTransform(igdData, CRS("+proj=longlat +datum=WGS84 +no_defs"))
     
     print("render map")
-    leaflet() %>% 
-      addPolygons(data=compData, weight=5, col = 'red') %>% 
+    # igdData %>% leaflet() %>% addTiles() %>% addPolygons()
+    leaflet() %>% addTiles() %>%
+      addPolygons(data=igdData, weight=3, color = 'red') %>% 
+      addPolygons(data=compData, weight=3, color = 'blue') %>% 
       addProviderTiles("Esri.OceanBasemap", group = "Esri.OceanBasemap") %>%
       addProviderTiles("CartoDB.DarkMatter", group = "DarkMatter (CartoDB)") %>%
       addProviderTiles("OpenStreetMap.Mapnik", group = "OpenStreetmap") %>%
       addProviderTiles("Esri.WorldImagery", group = "Esri.WorldImagery") %>%
       addLayersControl(baseGroups = c("OpenStreetmap","Esri.OceanBasemap",'DarkMatter (CartoDB)', 'Esri.WorldImagery'),
                        options = layersControlOptions(collapsed = TRUE, autoZIndex = F))
+  })
+  
+  observeEvent(input$unionButton, {
+    selectedCompData <- input$selectedCompData
+    selectedIgdData <- input$selectedIgdData
+    
+    compdb <- connectDB(pg_comp_db)
+    compData <- pgGetGeom(compdb, c("public", selectedCompData))
+    igddb <- connectDB(pg_igd_db)
+    igdData <- pgGetGeom(igddb, c("public", selectedIgdData))
+    
+    unionData <- union(igdData, compData)
+    
+    intgdb <- connectDB(pg_int_db)
+    importToIntg <- tryCatch({ pgInsert(intgdb, selectedCompData, unionData) }, error=function(e){ return(FALSE) })
+    if(importToIntg){
+      print("Shapefile has been imported successfully")
+      showModal(ui=modalDialog("Data has been integrated", footer = NULL), session=session)
+      removeModal(session)
+    } else {
+      print("Shapefile.. FAILED TO IMPORT")
+      showModal(ui=modalDialog("Failed to upload. Please try again..", footer = NULL), session=session)
+      removeModal(session)
+    }
+    disconnectDB(compdb)
+    disconnectDB(igddb)
+    disconnectDB(intgdb)
   })
   
 }
