@@ -65,6 +65,18 @@ server <- function(input, output, session) {
     disconnectDB(metadata)
   }
   
+  countCompTbl <- function(){
+    compilation<-connectDB(pg_comp_db)
+    return(length(dbListTables(compilation))-3)
+    disconnectDB(compilation)
+  }
+  
+  countIntTbl <- function(){
+    integration<-connectDB(pg_int_db)
+    return(length(dbListTables(integration))-3)
+    disconnectDB(integration)
+  }
+  
   getMetadataTbl <- function(){
     # return(dbReadTable(DB, c("public", "metadata")))
     metadata<-connectDB(pg_md_db)
@@ -74,6 +86,8 @@ server <- function(input, output, session) {
   
   listOfTbl <- reactiveValues(metadata=getMetadataTbl(),
                               numOfMetadata=countMetadataTbl(),
+                              numOfCompilated=countCompTbl(),
+                              numOfIntegrated=countIntTbl(),
                               recentMetadata=data.frame(),
                               recentValidityData=data.frame(),
                               tableKugi="",
@@ -90,7 +104,8 @@ server <- function(input, output, session) {
   output$countData <- renderUI({
     tags$ul(class="list-group",
       tags$li(class="list-group-item", span(class="badge", listOfTbl$numOfMetadata$count), "Data Input"),
-      tags$li(class="list-group-item", span(class="badge", 0), "Compilated Data")
+      tags$li(class="list-group-item", span(class="badge", listOfTbl$numOfCompilated), "Compilated Data"),
+      tags$li(class="list-group-item", span(class="badge", listOfTbl$numOfIntegrated), "Integrated Data")
     )
   })
   
@@ -1017,6 +1032,12 @@ server <- function(input, output, session) {
     disconnectDB(compdb)
     disconnectDB(igddb)
     disconnectDB(intgdb)
+  })
+  
+  output$integration_data <- renderDataTable({
+    metadata <- listOfTbl$metadata
+    # metadata$URL <- paste0('<u>Edit Attribute Data</u>')
+    datatable(metadata, selection="none", class = 'cell-border strip hover', escape=F) %>% formatStyle(1, cursor = 'pointer')
   })
   
 }
