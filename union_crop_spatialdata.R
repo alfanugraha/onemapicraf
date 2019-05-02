@@ -17,3 +17,7 @@ crop1 <- crop(igd, igt)
 
 #write shapefile from R
 writeOGR(obj = uni, dsn = "D:/Project/OMI/2_Software/2_Development/data_tes", layer = "union", driver = "ESRI Shapefile", morphToESRI = TRUE )
+
+
+igd1 <- readOGR(dsn = "D:/OMI/Jayapura/IGD", layer = "TOPONIMI_PT_50K")
+pgInsert(igd, c("public", "TOPONIMI_PT_50K"), igd1)
