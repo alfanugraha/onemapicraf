@@ -3329,7 +3329,17 @@ katalogdata<-data.frame(KUGI=c("EKOSISTEMTERUMBUKARANG_AR_5K (3D Multi Polygon)"
 "SPAM_LN_5K (Multi Line String)",
 "PAMSIMAS_AR_5K (Multi Polygon)",
 "LIMBAHSISTEM_LN_5K (Multi Line String)",
-"SANIMAS_AR_5K (Multi Polygon)"))
+"SANIMAS_AR_5K (Multi Polygon)",
+"POLARUANG_AR_1000K (3D Multi Polygon)",
+"POLARUANG_AR_500K (3D Multi Polygon)",
+"POLARUANG_AR_250K (3D Multi Polygon)",
+"POLARUANG_AR_100K (3D Multi Polygon)",
+"POLARUANG_AR_50K (3D Multi Polygon)",
+"POLARUANG_AR_25K (3D Multi Polygon)",
+"POLARUANG_AR_10K (3D Multi Polygon)",
+"POLARUANG_AR_5K (3D Multi Polygon)",
+"POLARUANG_AR_2K (3D Multi Polygon)",
+"POLARUANG_AR_1K (3D Multi Polygon)"))
 
 katalogpoint<-data.frame(Titik=katalogdata[grep("Point)", katalogdata$KUGI),])
 katalogline<-data.frame(Garis=katalogdata[grep("String)", katalogdata$KUGI),])
