@@ -216,9 +216,6 @@ navbarPage(title = appsTitle, theme = shinytheme("cerulean"), id="compilationApp
           actionButton("saveButton", "Save")
         ),
         tabPanel(
-          downloadButton("reportMetadata", "Download Metadata")
-        ),
-        tabPanel(
           downloadButton("reportTopology", "Download Topology Report")
         )
       )

@@ -398,13 +398,6 @@ server <- function(input, output, session) {
     updateTabsetPanel(session, "compilationApps", selected="tabData")
   })
   
-  output$reportMetadata <- downloadHandler(
-    filename = "metadata.csv",
-    content = function(file) {
-      write.table(t(listOfTbl$recentMetadata), file, quote=FALSE, sep=",")
-    }
-  )
-  
   output$reportTopology <- downloadHandler(
     filename = "topology.csv",
     content = function(file) {
