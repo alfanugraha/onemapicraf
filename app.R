@@ -873,7 +873,7 @@ server <- function(input, output, session) {
   
     showModal(modalDialog(
       title = "Eksport Berhasil",
-      "Data tersimpan di dalam folder Documents",
+      paste0("Data ", compTbl, " tersimpan di dalam folder ", Sys.getenv("R_USER")),
       easyClose = TRUE,
       footer = NULL
     ))
