@@ -408,7 +408,7 @@ server <- function(input, output, session) {
   ###*DATA Page####
   output$comp_data <- renderDataTable({
     metadata <- listOfTbl$metadata
-    action <- shinyInput(downloadButton, nrow(metadata), 'button_', label="Export", onclick='Shiny.onInputChange(\"export_button\", this.id)')
+    action <- shinyInput(actionButton, nrow(metadata), 'button_', label="Export", onclick='Shiny.onInputChange(\"export_button\", this.id)')
     metadata <- cbind(metadata, action)
     
     # metadata$URL <- paste0('<u>Edit Attribute Data</u>')
@@ -857,20 +857,27 @@ server <- function(input, output, session) {
     writeOGR(compShp, paste0(Sys.getenv("R_USER")), compTbl, driver="ESRI Shapefile", overwrite_layer = TRUE, check_exists = TRUE)
     
     # zip all
-    files <- list.files(".", full.names=TRUE, pattern=compTbl)
+    # files <- list.files(".", full.names=TRUE, pattern=compTbl)
     
-    output$button_1 <<- downloadHandler(
-      filename <- function() {
-        paste("output", "zip", sep=".")
-      },
-  
-      content <- function(fname) {
-        zip(fname, files)
-      },
-      contentType = "application/zip"
-    )
-            
     # download
+    # output$button_1 <<- downloadHandler(
+    #   filename <- function() {
+    #     paste("output", "zip", sep=".")
+    #   },
+    # 
+    #   content <- function(fname) {
+    #     zip(fname, files)
+    #   },
+    #   contentType = "application/zip"
+    # )
+  
+    showModal(modalDialog(
+      title = "Eksport Berhasil",
+      "Data tersimpan di dalam folder Documents",
+      easyClose = TRUE,
+      footer = NULL
+    ))
+            
   })
   
   observeEvent(input$comp_data_cell_clicked, {
