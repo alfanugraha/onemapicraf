@@ -854,7 +854,9 @@ server <- function(input, output, session) {
     saveXML(csw, file=paste0(Sys.getenv("R_USER"), "/", compTbl, ".xml"), encoding="UTF-8", indent=T)
             
     # write compiled data to shp         
-    writeOGR(compShp, paste0(Sys.getenv("R_USER")), compTbl, driver="ESRI Shapefile", overwrite_layer = TRUE, check_exists = TRUE)
+    wgs84_proj <- CRS("+proj=longlat +datum=WGS84")
+    compShpWgs <- spTransform(compShp, wgs84_proj)
+    writeOGR(compShpWgs, paste0(Sys.getenv("R_USER")), compTbl, driver="ESRI Shapefile", overwrite_layer = TRUE, check_exists = TRUE)
     
     # zip all
     # files <- list.files(".", full.names=TRUE, pattern=compTbl)
