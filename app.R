@@ -21,7 +21,7 @@ library(leaflet)
 
 ###*Define Variables####
 source('variables.R')
-source('kugi4.R')
+source('kugi5.R')
 
 ###*Setting Up Interface####
 ui <- source('interface.R')
@@ -39,7 +39,7 @@ server <- function(input, output, session) {
   
   pg_raw_db<-"rawdata"
   pg_md_db<-"metadata"
-  pg_kugi_db<-"kugi"
+  pg_kugi_db<-"kugi5"
   pg_comp_db<-"compilation"
   pg_igd_db<-"IGD"
   pg_int_db<-"integration"

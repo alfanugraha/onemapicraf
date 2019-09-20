@@ -22,7 +22,7 @@ navbarPage(title = appsTitle, theme = shinytheme("cerulean"), id="compilationApp
         ###input shapefile####
         # "Upload Data",
         tabPanel("Upload Data",
-          selectInput("shapeGeom", "Tipe data vektor", choices=c(`Titik`="Point)", `Garis`="String)", `Poligon`="Polygon)")),
+          selectInput("shapeGeom", "Tipe data vektor", choices=c(`Titik`="_PT_", `Garis`="_LN_", `Poligon`="_AR_")),
           uiOutput("listOfKugi"),
           fileInput("shpData", "Upload Shapefile", buttonLabel="Browse...", placeholder="No file selected", accept = c('zip', 'ZIP', 'ZIP (Archive File)', '.zip', '.ZIP'))
         ),
